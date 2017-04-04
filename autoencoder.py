@@ -23,9 +23,10 @@ display_step = 1
 examples_to_show = 10
 
 # Network Parameters
-n_hidden_1 = 256 # 1st layer num features
-n_hidden_2 = 128 # 2nd layer num features
-n_input = 784 # MNIST data input (img shape: 28*28)
+latent_z = 128  # compressed reprensentation
+n_hidden_1 = 500  # 1st layer num features
+n_hidden_2 = 500  # 2nd layer num features
+n_input = 784  # MNIST data input (img shape: 28*28)
 
 # tf Graph input (only pictures)
 X = tf.placeholder("float", [None, n_input])
@@ -33,14 +34,18 @@ X = tf.placeholder("float", [None, n_input])
 weights = {
     'encoder_h1': tf.Variable(tf.random_normal([n_input, n_hidden_1])),
     'encoder_h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
-    'decoder_h1': tf.Variable(tf.random_normal([n_hidden_2, n_hidden_1])),
-    'decoder_h2': tf.Variable(tf.random_normal([n_hidden_1, n_input])),
+    'encoder_z': tf.Variable(tf.random_normal([n_hidden_2, latent_z])),
+    'decoder_z': tf.Variable(tf.random_normal([latent_z, n_hidden_1])),
+    'decoder_h1': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
+    'decoder_h2': tf.Variable(tf.random_normal([n_hidden_2, n_input])),
 }
 biases = {
     'encoder_b1': tf.Variable(tf.random_normal([n_hidden_1])),
     'encoder_b2': tf.Variable(tf.random_normal([n_hidden_2])),
     'decoder_b1': tf.Variable(tf.random_normal([n_hidden_1])),
     'decoder_b2': tf.Variable(tf.random_normal([n_input])),
+    'encoder_zb': tf.Variable(tf.random_normal([latent_z])),
+    'decoder_zb': tf.Variable(tf.random_normal([n_hidden_1])),
 }
 
 # Building the encoder
@@ -53,18 +58,23 @@ def encoder(x):
     # Encoder Hidden layer with sigmoid activation #2
     layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['encoder_h2']),
                                    biases['encoder_b2']))
-    return layer_2
+    latent_layer = tf.nn.sigmoid(tf.add(tf.matmul(layer_2, weights['encoder_z']),
+                                   biases['encoder_zb']))
+    return latent_layer
 # Building the decoder
 
 
 def decoder(x):
     # Decoder Hidden layer with sigmoid activation #1
-    layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weights['decoder_h1']),
-                                   biases['decoder_b1']))
+    print("decode")
+    layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weights['decoder_z']),
+                                   biases['decoder_zb']))
     # Decoder Hidden layer with sigmoid activation #2
-    layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['decoder_h2']),
-                                   biases['decoder_b2']))
-    return layer_2
+    layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['decoder_h1']),
+                                   biases['decoder_b1']))
+    latent_layer = tf.nn.sigmoid(tf.add(tf.matmul(layer_2, weights['decoder_h2']),
+                                        biases['decoder_b2']))
+    return latent_layer
 
 # Construct model
 encoder_op = encoder(X)
@@ -111,3 +121,8 @@ with tf.Session() as sess:
     f.show()
     plt.draw()
     plt.waitforbuttonpress()
+
+    """
+    plt.imshow(reconstruct.reshape(28,28))
+     RELU
+     maximum log likelihood """
