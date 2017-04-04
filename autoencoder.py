@@ -17,7 +17,7 @@ mnist = input_data.read_data_sets("MNIST_data", one_hot=True)
 
 # Parameters
 learning_rate = 0.01
-training_epochs = 10
+training_epochs = 30
 batch_size = 256
 display_step = 1
 examples_to_show = 10
@@ -26,7 +26,7 @@ examples_to_show = 10
 latent_z = 128  # compressed reprensentation
 n_hidden_1 = 500  # 1st layer num features
 n_hidden_2 = 500  # 2nd layer num features
-n_input = 784  # MNIST data input (img shape: 28*28)
+n_input = 784  # MNvim.wikia.com/wiki/Search_and_replaceIST data input (img shape: 28*28)
 
 # tf Graph input (only pictures)
 X = tf.placeholder("float", [None, n_input])
@@ -52,27 +52,27 @@ biases = {
 
 
 def encoder(x):
-    # Encoder Hidden layer with sigmoid activation #1
-    layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weights['encoder_h1']),
+    # Encoder Hidden layer with relu activation #1
+    layer_1 = tf.nn.relu(tf.add(tf.matmul(x, weights['encoder_h1']),
                                    biases['encoder_b1']))
-    # Encoder Hidden layer with sigmoid activation #2
-    layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['encoder_h2']),
+    # Encoder Hidden layer with relu activation #2
+    layer_2 = tf.nn.relu(tf.add(tf.matmul(layer_1, weights['encoder_h2']),
                                    biases['encoder_b2']))
-    latent_layer = tf.nn.sigmoid(tf.add(tf.matmul(layer_2, weights['encoder_z']),
+    latent_layer = tf.nn.relu(tf.add(tf.matmul(layer_2, weights['encoder_z']),
                                    biases['encoder_zb']))
     return latent_layer
 # Building the decoder
 
 
 def decoder(x):
-    # Decoder Hidden layer with sigmoid activation #1
+    # Decoder Hidden layer with relu activation #1
     print("decode")
-    layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weights['decoder_z']),
+    layer_1 = tf.nn.relu(tf.add(tf.matmul(x, weights['decoder_z']),
                                    biases['decoder_zb']))
-    # Decoder Hidden layer with sigmoid activation #2
-    layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['decoder_h1']),
+    # Decoder Hidden layer with relu activation #2
+    layer_2 = tf.nn.relu(tf.add(tf.matmul(layer_1, weights['decoder_h1']),
                                    biases['decoder_b1']))
-    latent_layer = tf.nn.sigmoid(tf.add(tf.matmul(layer_2, weights['decoder_h2']),
+    latent_layer = tf.nn.relu(tf.add(tf.matmul(layer_2, weights['decoder_h2']),
                                         biases['decoder_b2']))
     return latent_layer
 
@@ -87,10 +87,10 @@ y_true = X
 
 # Define loss and optimizer, minimize the squared error
 cost = tf.reduce_mean(tf.pow(y_true - y_pred, 2))
-optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(cost)
+optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost)
 
 # Initializing the variables
-init = tf.global_variables_initializer()
+init = tf.initialize_all_variables()
 
 # Launch the graph
 with tf.Session() as sess:
