@@ -10,6 +10,7 @@ Links:
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
@@ -17,13 +18,14 @@ mnist = input_data.read_data_sets("MNIST_data", one_hot=True)
 
 # Parameters
 learning_rate = 0.01
-training_epochs = 30
-batch_size = 256
+training_epochs = 1
+batch_size = 512
 display_step = 1
 examples_to_show = 10
+beta = 0.01
 
 # Network Parameters
-latent_z = 128  # compressed reprensentation
+latent_z = 32  # compressed reprensentation
 n_hidden_1 = 500  # 1st layer num features
 n_hidden_2 = 500  # 2nd layer num features
 n_input = 784  # MNvim.wikia.com/wiki/Search_and_replaceIST data input (img shape: 28*28)
@@ -53,12 +55,12 @@ biases = {
 
 def encoder(x):
     # Encoder Hidden layer with relu activation #1
-    layer_1 = tf.nn.relu(tf.add(tf.matmul(x, weights['encoder_h1']),
+    layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weights['encoder_h1']),
                                    biases['encoder_b1']))
     # Encoder Hidden layer with relu activation #2
-    layer_2 = tf.nn.relu(tf.add(tf.matmul(layer_1, weights['encoder_h2']),
+    layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['encoder_h2']),
                                    biases['encoder_b2']))
-    latent_layer = tf.nn.relu(tf.add(tf.matmul(layer_2, weights['encoder_z']),
+    latent_layer = tf.nn.sigmoid(tf.add(tf.matmul(layer_2, weights['encoder_z']),
                                    biases['encoder_zb']))
     return latent_layer
 # Building the decoder
@@ -67,10 +69,9 @@ def encoder(x):
 def decoder(x):
     # Decoder Hidden layer with relu activation #1
     print("decode")
-    layer_1 = tf.nn.relu(tf.add(tf.matmul(x, weights['decoder_z']),
-                                   biases['decoder_zb']))
+    layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weights['decoder_z']), biases['decoder_zb']))
     # Decoder Hidden layer with relu activation #2
-    layer_2 = tf.nn.relu(tf.add(tf.matmul(layer_1, weights['decoder_h1']),
+    layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['decoder_h1']),
                                    biases['decoder_b1']))
     latent_layer = tf.nn.relu(tf.add(tf.matmul(layer_2, weights['decoder_h2']),
                                         biases['decoder_b2']))
@@ -86,12 +87,19 @@ y_pred = decoder_op
 y_true = X
 
 # Define loss and optimizer, minimize the squared error
+"""cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_pred, labels=y_true))
+regularizers = tf.nn.l2_loss(weights['encoder_h1']) + tf.nn.l2_loss(weights['encoder_h2']) + \
+               tf.nn.l2_loss(weights['encoder_z']) + tf.nn.l2_loss(weights['decoder_z']) + \
+               tf.nn.l2_loss(weights['decoder_h1']) + tf.nn.l2_loss(weights['decoder_h2'])
+#cost = tf.reduce_mean(loss + beta * regularizers) """
 cost = tf.reduce_mean(tf.pow(y_true - y_pred, 2))
-optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost)
+optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(cost)
+
 
 # Initializing the variables
 init = tf.initialize_all_variables()
-
+# plot train error
+trainError = []
 # Launch the graph
 with tf.Session() as sess:
     sess.run(init)
@@ -105,11 +113,16 @@ with tf.Session() as sess:
             _, c = sess.run([optimizer, cost], feed_dict={X: batch_xs})
         # Display logs per epoch step
         if epoch % display_step == 0:
+            trainError.append(c)    #
             print("Epoch:", '%04d' % (epoch+1),
                   "cost=", "{:.9f}".format(c))
+        #trainError.append(c)
 
     print("Optimization Finished!")
-
+    print(trainError)
+    # plt.plot(range(training_epochs), trainError, "ro")
+    # plt.show()
+ 
     # Applying encode and decode over test set
     encode_decode = sess.run(
         y_pred, feed_dict={X: mnist.test.images[:examples_to_show]})
@@ -118,11 +131,7 @@ with tf.Session() as sess:
     for i in range(examples_to_show):
         a[0][i].imshow(np.reshape(mnist.test.images[i], (28, 28)))
         a[1][i].imshow(np.reshape(encode_decode[i], (28, 28)))
+    print(len(trainError))
     f.show()
     plt.draw()
     plt.waitforbuttonpress()
-
-    """
-    plt.imshow(reconstruct.reshape(28,28))
-     RELU
-     maximum log likelihood """
