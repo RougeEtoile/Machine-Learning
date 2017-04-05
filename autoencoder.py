@@ -10,7 +10,6 @@ Links:
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-import pickle
 
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
@@ -87,13 +86,8 @@ y_pred = decoder_op
 y_true = X
 
 # Define loss and optimizer, minimize the squared error
-"""cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_pred, labels=y_true))
-regularizers = tf.nn.l2_loss(weights['encoder_h1']) + tf.nn.l2_loss(weights['encoder_h2']) + \
-               tf.nn.l2_loss(weights['encoder_z']) + tf.nn.l2_loss(weights['decoder_z']) + \
-               tf.nn.l2_loss(weights['decoder_h1']) + tf.nn.l2_loss(weights['decoder_h2'])
-#cost = tf.reduce_mean(loss + beta * regularizers) """
 cost = tf.reduce_mean(tf.pow(y_true - y_pred, 2))
-optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(cost)
+optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost)
 
 
 # Initializing the variables
