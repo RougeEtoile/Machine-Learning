@@ -17,20 +17,21 @@ mnist = input_data.read_data_sets("MNIST_data", one_hot=True)
 
 # Parameters
 learning_rate = 0.01
-training_epochs = 1
-batch_size = 512
+training_epochs = 10
+batch_size = 256
 display_step = 1
 examples_to_show = 10
 beta = 0.01
 
 # Network Parameters
-latent_z = 32  # compressed reprensentation
+latent_z = 10  # compressed reprensentation
 n_hidden_1 = 500  # 1st layer num features
 n_hidden_2 = 500  # 2nd layer num features
 n_input = 784  # MNvim.wikia.com/wiki/Search_and_replaceIST data input (img shape: 28*28)
 
 # tf Graph input (only pictures)
-X = tf.placeholder("float", [None, n_input])
+x = tf.placeholder("float", [None, n_input])
+y_ = tf.placeholder("float", [None, 10])
 
 weights = {
     'encoder_h1': tf.Variable(tf.random_normal([n_input, n_hidden_1])),
@@ -77,18 +78,17 @@ def decoder(x):
     return latent_layer
 
 # Construct model
-encoder_op = encoder(X)
-decoder_op = decoder(encoder_op)
+encoder_op = encoder(x)
+# decoder_op = decoder(encoder_op)
 
 # Prediction
-y_pred = decoder_op
-# Targets (Labels) are the input data.
-y_true = X
+y = encoder_op
+# Tar
 
 # Define loss and optimizer, minimize the squared error
-cost = tf.reduce_mean(tf.pow(y_true - y_pred, 2))
-optimizer = tf.train.AdamOptimizer(learning_rate).minimize(cost)
-
+cost = tf.reduce_mean(
+      tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
+optimizer = tf.train.GradientDescentOptimizer(0.5).minimize(cost)
 
 # Initializing the variables
 init = tf.initialize_all_variables()
@@ -97,28 +97,30 @@ trainError = []
 # Launch the graph
 with tf.Session() as sess:
     sess.run(init)
-    total_batch = int(mnist.train.num_examples/batch_size)
     # Training cycle
     for epoch in range(training_epochs):
         # Loop over all batches
-        for i in range(total_batch):
-            batch_xs, batch_ys = mnist.train.next_batch(batch_size)
-            # Run optimization op (backprop) and cost op (to get loss value)
-            _, c = sess.run([optimizer, cost], feed_dict={X: batch_xs})
-        # Display logs per epoch step
+        for i in range(batch_size):
+            batch_xs, batch_ys = mnist.train.next_batch(100)
+            c = sess.run([cost, optimizer], feed_dict={x: batch_xs, y_: batch_ys})
         if epoch % display_step == 0:
             trainError.append(c)    #
             print("Epoch:", '%04d' % (epoch+1),
-                  "cost=", "{:.9f}".format(c))
+                  "cost=", c[0])
         #trainError.append(c)
-
     print("Optimization Finished!")
-    print(trainError)
+    #print(trainError)
     # plt.plot(range(training_epochs), trainError, "ro")
     # plt.show()
- 
+
+    correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    print(sess.run(accuracy, feed_dict={x: mnist.test.images,
+                                        y_: mnist.test.labels}))
+
     # Applying encode and decode over test set
-    encode_decode = sess.run(
+
+    """encode_decode = sess.run(
         y_pred, feed_dict={X: mnist.test.images[:examples_to_show]})
     # Compare original images with their reconstructions
     f, a = plt.subplots(2, 10, figsize=(10, 2))
@@ -129,3 +131,4 @@ with tf.Session() as sess:
     f.show()
     plt.draw()
     plt.waitforbuttonpress()
+"""
