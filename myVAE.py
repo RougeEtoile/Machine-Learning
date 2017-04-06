@@ -9,30 +9,12 @@ np.random.seed(0)
 tf.set_random_seed(0)
 
 
-def xavier_init(fan_in, fan_out, constant=1):
-    """ Xavier initialization of network weights"""
-    # https://stackoverflow.com/questions/33640581/how-to-do-xavier-initialization-on-tensorflow
-    low = -constant*np.sqrt(6.0/(fan_in + fan_out))
-    high = constant*np.sqrt(6.0/(fan_in + fan_out))
-    return tf.random_uniform((fan_in, fan_out),
-                             minval=low, maxval=high,
-                             dtype=tf.float32)
-
-
 class VariationalAutoencoder(object):
-    """ Variation Autoencoder (VAE) with an sklearn-like interface implemented using TensorFlow.
 
-    This implementation uses probabilistic encoders and decoders using Gaussian
-    distributions and  realized by multi-layer perceptrons. The VAE can be learned
-    end-to-end.
-
-    See "Auto-Encoding Variational Bayes" by Kingma and Welling for more details.
-    """
-
-    def __init__(self, network_architecture, transfer_fct=tf.nn.softplus,
+    def __init__(self, network_architecture, activation_fct=tf.nn.relu,
                  learning_rate=0.001, batch_size=100):
         self.network_architecture = network_architecture
-        self.transfer_fct = transfer_fct
+        self.activation_fct = activation_fct
         self.learning_rate = learning_rate
         self.batch_size = batch_size
 
@@ -60,12 +42,12 @@ class VariationalAutoencoder(object):
         # (log) variance of Gaussian distribution in latent
         # space
         self.z_mean, self.z_log_sigma_sq = \
-            self._recognition_network(network_weights["weights_recog"],
-                                      network_weights["biases_recog"])
+            self._encoder_network(network_weights["weights_encoder"],
+                                      network_weights["biases_encoder"])
 
         # Draw one sample z from Gaussian distribution
-        n_z = self.network_architecture["n_z"]
-        eps = tf.random_normal((self.batch_size, n_z), 0, 1,
+        latent_z = self.network_architecture["latent_z"]
+        eps = tf.random_normal((self.batch_size, latent_z), 0, 1,
                                dtype=tf.float32)
         # z = mu + sigma*epsilon
         self.z = tf.add(self.z_mean,
@@ -74,42 +56,52 @@ class VariationalAutoencoder(object):
         # Use generator to determine mean of
         # Bernoulli distribution of reconstructed input
         self.x_reconstr_mean = \
-            self._generator_network(network_weights["weights_gener"],
-                                    network_weights["biases_gener"])
+            self._decoder_network(network_weights["weights_decoder"],
+                                    network_weights["biases_decoder"])
 
-    def _initialize_weights(self, n_hidden_recog_1, n_hidden_recog_2,
-                            n_hidden_gener_1, n_hidden_gener_2,
-                            n_input, n_z):
+    def _initialize_weights(self, encoder_1, encoder_2,
+                            decoder_1, decoder_2,
+                            n_input, latent_z):
         all_weights = dict()
-        all_weights['weights_recog'] = {
-            'h1': tf.Variable(xavier_init(n_input, n_hidden_recog_1)),
-            'h2': tf.Variable(xavier_init(n_hidden_recog_1, n_hidden_recog_2)),
-            'out_mean': tf.Variable(xavier_init(n_hidden_recog_2, n_z)),
-            'out_log_sigma': tf.Variable(xavier_init(n_hidden_recog_2, n_z))}
-        all_weights['biases_recog'] = {
-            'b1': tf.Variable(tf.zeros([n_hidden_recog_1], dtype=tf.float32)),
-            'b2': tf.Variable(tf.zeros([n_hidden_recog_2], dtype=tf.float32)),
-            'out_mean': tf.Variable(tf.zeros([n_z], dtype=tf.float32)),
-            'out_log_sigma': tf.Variable(tf.zeros([n_z], dtype=tf.float32))}
-        all_weights['weights_gener'] = {
-            'h1': tf.Variable(xavier_init(n_z, n_hidden_gener_1)),
-            'h2': tf.Variable(xavier_init(n_hidden_gener_1, n_hidden_gener_2)),
-            'out_mean': tf.Variable(xavier_init(n_hidden_gener_2, n_input)),
-            'out_log_sigma': tf.Variable(xavier_init(n_hidden_gener_2, n_input))}
-        all_weights['biases_gener'] = {
-            'b1': tf.Variable(tf.zeros([n_hidden_gener_1], dtype=tf.float32)),
-            'b2': tf.Variable(tf.zeros([n_hidden_gener_2], dtype=tf.float32)),
+        with tf.variable_scope("weights_encoder"):
+            all_weights['weights_encoder'] = {
+                'h1': tf.get_variable('h1', shape=[n_input, encoder_1],
+                                      initializer=tf.contrib.layers.xavier_initializer()),
+                'h2': tf.get_variable('h2', shape=[encoder_1, encoder_2],
+                                      initializer=tf.contrib.layers.xavier_initializer()),
+                'out_mean': tf.get_variable('out_mean', shape=[encoder_2, latent_z],
+                                      initializer=tf.contrib.layers.xavier_initializer()),
+                'out_log_sigma': tf.get_variable('out_log_sigma', shape=[encoder_2, latent_z],
+                                            initializer=tf.contrib.layers.xavier_initializer())}
+        all_weights['biases_encoder'] = {
+            'b1': tf.Variable(tf.zeros([encoder_1], dtype=tf.float32)),
+            'b2': tf.Variable(tf.zeros([encoder_2], dtype=tf.float32)),
+            'out_mean': tf.Variable(tf.zeros([latent_z], dtype=tf.float32)),
+            'out_log_sigma': tf.Variable(tf.zeros([latent_z], dtype=tf.float32))}
+        with tf.variable_scope("weights_decoder"):
+            all_weights['weights_decoder'] = {
+                'h1': tf.get_variable('h1', shape=[latent_z, decoder_1],
+                                            initializer=tf.contrib.layers.xavier_initializer()),
+                'h2': tf.get_variable('h2', shape=[decoder_1, decoder_2],
+                                            initializer=tf.contrib.layers.xavier_initializer()),
+                'out_mean': tf.get_variable('out_mean', shape=[decoder_2, n_input],
+                                            initializer=tf.contrib.layers.xavier_initializer()),
+                'out_log_sigma': tf.get_variable('out_log_sigma', shape=[decoder_2, n_input],
+                                            initializer=tf.contrib.layers.xavier_initializer())}
+        all_weights['biases_decoder'] = {
+            'b1': tf.Variable(tf.zeros([decoder_1], dtype=tf.float32)),
+            'b2': tf.Variable(tf.zeros([decoder_2], dtype=tf.float32)),
             'out_mean': tf.Variable(tf.zeros([n_input], dtype=tf.float32)),
             'out_log_sigma': tf.Variable(tf.zeros([n_input], dtype=tf.float32))}
         return all_weights
 
-    def _recognition_network(self, weights, biases):
+    def _encoder_network(self, weights, biases):
         # Generate probabilistic encoder (recognition network), which
         # maps inputs onto a normal distribution in latent space.
         # The transformation is parametrized and can be learned.
-        layer_1 = self.transfer_fct(tf.add(tf.matmul(self.x, weights['h1']),
+        layer_1 = self.activation_fct(tf.add(tf.matmul(self.x, weights['h1']),
                                            biases['b1']))
-        layer_2 = self.transfer_fct(tf.add(tf.matmul(layer_1, weights['h2']),
+        layer_2 = self.activation_fct(tf.add(tf.matmul(layer_1, weights['h2']),
                                            biases['b2']))
         z_mean = tf.add(tf.matmul(layer_2, weights['out_mean']),
                         biases['out_mean'])
@@ -118,13 +110,13 @@ class VariationalAutoencoder(object):
                    biases['out_log_sigma'])
         return (z_mean, z_log_sigma_sq)
 
-    def _generator_network(self, weights, biases):
+    def _decoder_network(self, weights, biases):
         # Generate probabilistic decoder (decoder network), which
         # maps points in latent space onto a Bernoulli distribution in data space.
         # The transformation is parametrized and can be learned.
-        layer_1 = self.transfer_fct(tf.add(tf.matmul(self.z, weights['h1']),
+        layer_1 = self.activation_fct(tf.add(tf.matmul(self.z, weights['h1']),
                                            biases['b1']))
-        layer_2 = self.transfer_fct(tf.add(tf.matmul(layer_1, weights['h2']),
+        layer_2 = self.activation_fct(tf.add(tf.matmul(layer_1, weights['h2']),
                                            biases['b2']))
         x_reconstr_mean = \
             tf.nn.sigmoid(tf.add(tf.matmul(layer_2, weights['out_mean']),
@@ -155,8 +147,7 @@ class VariationalAutoencoder(object):
                                            - tf.exp(self.z_log_sigma_sq), 1)
         self.cost = tf.reduce_mean(reconstr_loss + latent_loss)  # average over batch
         # Use ADAM optimizer
-        self.optimizer = \
-            tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cost)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cost)
 
     def partial_fit(self, X):
         """Train model based on mini-batch of input data.
@@ -181,7 +172,7 @@ class VariationalAutoencoder(object):
         space.
         """
         if z_mu is None:
-            z_mu = np.random.normal(size=self.network_architecture["n_z"])
+            z_mu = np.random.normal(size=self.network_architecture["latent_z"])
         # Note: This maps to mean of distribution, we could alternatively
         # sample from Gaussian distribution
         return self.sess.run(self.x_reconstr_mean,
@@ -191,6 +182,7 @@ class VariationalAutoencoder(object):
         """ Use VAE to reconstruct given data. """
         return self.sess.run(self.x_reconstr_mean,
                              feed_dict={self.x: X})
+
 
 def train(network_architecture, learning_rate=0.001,
           batch_size=100, training_epochs=10, display_step=5):
@@ -204,7 +196,6 @@ def train(network_architecture, learning_rate=0.001,
         # Loop over all batches
         for i in range(total_batch):
             batch_xs, _ = mnist.train.next_batch(batch_size)
-
             # Fit training using batch data
             cost = vae.partial_fit(batch_xs)
             # Compute average loss
@@ -214,14 +205,37 @@ def train(network_architecture, learning_rate=0.001,
         if epoch % display_step == 0:
             print("Epoch:", '%04d' % (epoch + 1),
                   "cost=", "{:.9f}".format(avg_cost))
+
     return vae
 
-network_architecture = \
-    dict(n_hidden_recog_1=500,  # 1st layer encoder neurons
-         n_hidden_recog_2=500,  # 2nd layer encoder neurons
-         n_hidden_gener_1=500,  # 1st layer decoder neurons
-         n_hidden_gener_2=500,  # 2nd layer decoder neurons
-         n_input=784,  # MNIST data input (img shape: 28*28)
-         n_z=20)  # dimensionality of latent space
 
-vae = train(network_architecture, training_epochs=75)
+def gen(vae, size=5):
+    for i in range(size):
+        batch_xs, _ = mnist.train.next_batch(1)
+        vae.generate()
+
+network_architecture = \
+    dict(encoder_1=500,  # 1st layer encoder neurons
+         encoder_2=500,  # 2nd layer encoder neurons
+         decoder_1=500,  # 1st layer decoder neurons
+         decoder_2=500,  # 2nd layer decoder neurons
+         n_input=784,  # MNIST data input (img shape: 28*28)
+         latent_z=10)  # dimensionality of latent space
+
+vae = train(network_architecture, training_epochs=1)
+
+x_sample = mnist.test.next_batch(100)[0]
+x_reconstruct = vae.reconstruct(x_sample)
+
+plt.figure(figsize=(8, 12))
+for i in range(5):
+    plt.subplot(5, 2, 2*i + 1)
+    plt.imshow(x_sample[i].reshape(28, 28), vmin=0, vmax=1)
+    plt.title("Test input")
+    plt.colorbar()
+    plt.subplot(5, 2, 2*i + 2)
+    plt.imshow(x_reconstruct[i].reshape(28, 28), vmin=0, vmax=1)
+    plt.title("Reconstruction")
+    plt.colorbar()
+plt.tight_layout()
+plt.show()
