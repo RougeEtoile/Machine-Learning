@@ -3,6 +3,8 @@ import tensorflow as tf
 import input_data
 import matplotlib.pyplot as plt
 
+
+
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 n_samples = mnist.train.num_examples
 np.random.seed(0)
@@ -185,7 +187,7 @@ class VariationalAutoencoder(object):
 
 
 def train(network_architecture, learning_rate=0.001,
-          batch_size=100, training_epochs=10, display_step=5):
+          batch_size=100, training_epochs=10, display_step=1):
     vae = VariationalAutoencoder(network_architecture,
                                  learning_rate=learning_rate,
                                  batch_size=batch_size)
@@ -205,14 +207,37 @@ def train(network_architecture, learning_rate=0.001,
         if epoch % display_step == 0:
             print("Epoch:", '%04d' % (epoch + 1),
                   "cost=", "{:.9f}".format(avg_cost))
-
     return vae
 
 
-def gen(vae, size=5):
-    for i in range(size):
-        batch_xs, _ = mnist.train.next_batch(1)
-        vae.generate()
+def visualize_latent(vae, x_sample):  # latent must be size 2
+    z = vae.transform(x_sample)
+    f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
+    im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10",
+                    alpha=0.7)
+    ax.set_xlabel('First dimension of sampled latent variable $z_1$')
+    ax.set_ylabel('Second dimension of sampled latent variable mean $z_2$')
+    ax.set_xlim([-10., 10.])
+    ax.set_ylim([-10., 10.])
+    f.colorbar(im, ax=ax, label='Digit class')
+    plt.tight_layout()
+
+
+def visualize_manifold(vae):
+    nx = ny = 20
+    x_values = np.linspace(-3, 3, nx)
+    y_values = np.linspace(-3, 3, ny)
+    canvas = np.empty((28 * ny, 28 * nx))
+    for ii, yi in enumerate(x_values):
+        for j, xi in enumerate(y_values):
+            z = vae.transform(x_sample)
+            x_mean = vae.generate(z)
+            canvas[(nx - ii - 1) * 28:(nx - ii) * 28, j *
+                                                      28:(j + 1) * 28] = x_mean[0].reshape(28, 28)
+    plt.figure(figsize=(8, 10))
+    Xi, Yi = np.meshgrid(x_values, y_values)
+    plt.imshow(canvas)
+    plt.tight_layout()
 
 network_architecture = \
     dict(encoder_1=500,  # 1st layer encoder neurons
@@ -220,12 +245,15 @@ network_architecture = \
          decoder_1=500,  # 1st layer decoder neurons
          decoder_2=500,  # 2nd layer decoder neurons
          n_input=784,  # MNIST data input (img shape: 28*28)
-         latent_z=10)  # dimensionality of latent space
+         latent_z=2)  # dimensionality of latent space
 
-vae = train(network_architecture, training_epochs=1)
+vae = train(network_architecture, training_epochs=500)
 
-x_sample = mnist.test.next_batch(100)[0]
+x_sample, _ = mnist.test.next_batch(100)
 x_reconstruct = vae.reconstruct(x_sample)
+visualize_latent(vae, x_sample)
+visualize_manifold(vae)
+
 
 plt.figure(figsize=(8, 12))
 for i in range(5):
