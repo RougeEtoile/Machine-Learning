@@ -228,12 +228,23 @@ def visualize_manifold(vae):
     x_values = np.linspace(-3, 3, nx)
     y_values = np.linspace(-3, 3, ny)
     canvas = np.empty((28 * ny, 28 * nx))
+    list =[]
     for ii, yi in enumerate(x_values):
         for j, xi in enumerate(y_values):
-            z = vae.transform(x_sample)
-            x_mean = vae.generate(z)
-            canvas[(nx - ii - 1) * 28:(nx - ii) * 28, j *
-                                                      28:(j + 1) * 28] = x_mean[0].reshape(28, 28)
+            np_z = np.array([xi, yi])
+            list.append(np_z)
+            #print(np_z)
+            #x_sample, _ = mnist.test.next_batch(100)
+            #z = vae.transform(x_sample)
+            if len(list) == 100:
+                print("list was made")
+                print(list)
+                x_mean = vae.generate(list)
+                print(x_mean)
+                for i in range(len((x_mean))):
+                    print(i)
+                    canvas[(nx - ii - 1) * 28:(nx - ii) * 28, j *
+                                                              28:(j + 1) * 28] = x_mean[i].reshape(28, 28)
     plt.figure(figsize=(8, 10))
     Xi, Yi = np.meshgrid(x_values, y_values)
     plt.imshow(canvas)
@@ -247,7 +258,7 @@ network_architecture = \
          n_input=784,  # MNIST data input (img shape: 28*28)
          latent_z=2)  # dimensionality of latent space
 
-vae = train(network_architecture, training_epochs=500)
+vae = train(network_architecture, training_epochs=1)
 
 x_sample, _ = mnist.test.next_batch(100)
 x_reconstruct = vae.reconstruct(x_sample)
