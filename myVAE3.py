@@ -10,8 +10,8 @@ n_samples = mnist.train.num_examples
 np.random.seed(0)
 tf.set_random_seed(0)
 
-os.mkdir(r"plots\5")
-os.chdir(r"plots\5")
+os.mkdir(r"plots\4")
+os.chdir(r"plots\4")
 
 
 class VariationalAutoencoder(object):
@@ -64,38 +64,32 @@ class VariationalAutoencoder(object):
             self._decoder_network(network_weights["weights_decoder"],
                                     network_weights["biases_decoder"])
 
-    def _initialize_weights(self, encoder_1, encoder_2,
-                            decoder_1, decoder_2,
+    def _initialize_weights(self, encoder_1,
+                            decoder_1,
                             n_input, latent_z):
         all_weights = dict()
         with tf.variable_scope("weights_encoder"):
             all_weights['weights_encoder'] = {
                 'h1': tf.get_variable('h1', shape=[n_input, encoder_1],
                                       initializer=tf.contrib.layers.xavier_initializer()),
-                'h2': tf.get_variable('h2', shape=[encoder_1, encoder_2],
+                'out_mean': tf.get_variable('out_mean', shape=[encoder_1, latent_z],
                                       initializer=tf.contrib.layers.xavier_initializer()),
-                'out_mean': tf.get_variable('out_mean', shape=[encoder_2, latent_z],
-                                      initializer=tf.contrib.layers.xavier_initializer()),
-                'out_log_sigma': tf.get_variable('out_log_sigma', shape=[encoder_2, latent_z],
+                'out_log_sigma': tf.get_variable('out_log_sigma', shape=[encoder_1, latent_z],
                                             initializer=tf.contrib.layers.xavier_initializer())}
         all_weights['biases_encoder'] = {
             'b1': tf.Variable(tf.zeros([encoder_1], dtype=tf.float32)),
-            'b2': tf.Variable(tf.zeros([encoder_2], dtype=tf.float32)),
             'out_mean': tf.Variable(tf.zeros([latent_z], dtype=tf.float32)),
             'out_log_sigma': tf.Variable(tf.zeros([latent_z], dtype=tf.float32))}
         with tf.variable_scope("weights_decoder"):
             all_weights['weights_decoder'] = {
                 'h1': tf.get_variable('h1', shape=[latent_z, decoder_1],
                                             initializer=tf.contrib.layers.xavier_initializer()),
-                'h2': tf.get_variable('h2', shape=[decoder_1, decoder_2],
+                'out_mean': tf.get_variable('out_mean', shape=[decoder_1, n_input],
                                             initializer=tf.contrib.layers.xavier_initializer()),
-                'out_mean': tf.get_variable('out_mean', shape=[decoder_2, n_input],
-                                            initializer=tf.contrib.layers.xavier_initializer()),
-                'out_log_sigma': tf.get_variable('out_log_sigma', shape=[decoder_2, n_input],
+                'out_log_sigma': tf.get_variable('out_log_sigma', shape=[decoder_1, n_input],
                                             initializer=tf.contrib.layers.xavier_initializer())}
         all_weights['biases_decoder'] = {
             'b1': tf.Variable(tf.zeros([decoder_1], dtype=tf.float32)),
-            'b2': tf.Variable(tf.zeros([decoder_2], dtype=tf.float32)),
             'out_mean': tf.Variable(tf.zeros([n_input], dtype=tf.float32)),
             'out_log_sigma': tf.Variable(tf.zeros([n_input], dtype=tf.float32))}
         return all_weights
@@ -106,14 +100,12 @@ class VariationalAutoencoder(object):
         # The transformation is parametrized and can be learned.
         layer_1 = self.activation_fct(tf.add(tf.matmul(self.x, weights['h1']),
                                            biases['b1']))
-        layer_2 = self.activation_fct(tf.add(tf.matmul(layer_1, weights['h2']),
-                                           biases['b2']))
-        z_mean = tf.add(tf.matmul(layer_2, weights['out_mean']),
+        z_mean = tf.add(tf.matmul(layer_1, weights['out_mean']),
                         biases['out_mean'])
         z_log_sigma_sq = \
-            tf.add(tf.matmul(layer_2, weights['out_log_sigma']),
+            tf.add(tf.matmul(layer_1, weights['out_log_sigma']),
                    biases['out_log_sigma'])
-        return (z_mean, z_log_sigma_sq)
+        return z_mean, z_log_sigma_sq
 
     def _decoder_network(self, weights, biases):
         # Generate probabilistic decoder (decoder network), which
@@ -121,10 +113,8 @@ class VariationalAutoencoder(object):
         # The transformation is parametrized and can be learned.
         layer_1 = self.activation_fct(tf.add(tf.matmul(self.z, weights['h1']),
                                            biases['b1']))
-        layer_2 = self.activation_fct(tf.add(tf.matmul(layer_1, weights['h2']),
-                                           biases['b2']))
         x_reconstr_mean = \
-            tf.nn.sigmoid(tf.add(tf.matmul(layer_2, weights['out_mean']),
+            tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['out_mean']),
                                  biases['out_mean']))
         return x_reconstr_mean
 
@@ -260,18 +250,16 @@ def visualize_manifold(vae, x_sample):
     plt.tight_layout()
 
 network_architecture = \
-    dict(encoder_1=500,  # 1st layer encoder neurons
-         encoder_2=500,  # 2nd layer encoder neurons
-         decoder_1=500,  # 1st layer decoder neurons
-         decoder_2=500,  # 2nd layer decoder neurons
+    dict(encoder_1=250,  # 1st layer encoder neurons
+         decoder_1=250,  # 1st layer decoder neurons
          n_input=784,  # MNIST data input (img shape: 28*28)
-         latent_z=2)  # dimensionality of latent space
+         latent_z=10)  # dimensionality of latent space
 
 vae = train(network_architecture, training_epochs=100)
 
 x_sample, _ = mnist.test.next_batch(100)
 x_reconstruct = vae.reconstruct(x_sample)
-visualize_latent(vae, x_sample)
+#visualize_latent(vae, x_sample)
 #visualize_manifold(vae, x_sample)
 
 
@@ -288,4 +276,3 @@ for i in range(5):
 plt.tight_layout()
 plt.savefig('reconstruction')
 plt.show()
-
