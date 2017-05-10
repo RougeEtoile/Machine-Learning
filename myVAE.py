@@ -2,13 +2,16 @@ import numpy as np
 import tensorflow as tf
 import input_data
 import matplotlib.pyplot as plt
-
+import os
 
 
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 n_samples = mnist.train.num_examples
 np.random.seed(0)
 tf.set_random_seed(0)
+
+os.mkdir(r"plots\5")
+os.chdir(r"plots\5")
 
 
 class VariationalAutoencoder(object):
@@ -191,6 +194,8 @@ def train(network_architecture, learning_rate=0.001,
     vae = VariationalAutoencoder(network_architecture,
                                  learning_rate=learning_rate,
                                  batch_size=batch_size)
+
+    costlist = []
     # Training cycle
     for epoch in range(training_epochs):
         avg_cost = 0.
@@ -207,6 +212,18 @@ def train(network_architecture, learning_rate=0.001,
         if epoch % display_step == 0:
             print("Epoch:", '%04d' % (epoch + 1),
                   "cost=", "{:.9f}".format(avg_cost))
+            costlist.append(avg_cost)
+
+    #plot cost
+    thefile = open('final_cost.txt', 'w')
+    thefile.write("%s\n" % costlist[-1])
+    plt.plot(costlist)
+    plt.ylabel('cost')
+    plt.xlabel('epoch')
+    plt.title('cost per epoch')
+    plt.savefig('cost_per_epoch')
+    plt.show()
+    plt.close()
     return vae
 
 
@@ -220,14 +237,17 @@ def visualize_latent(vae, x_sample):  # latent must be size 2
     ax.set_xlim([-10., 10.])
     ax.set_ylim([-10., 10.])
     f.colorbar(im, ax=ax, label='Digit class')
+    plt.savefig('latent_visualization')
     plt.tight_layout()
 
 
-def visualize_manifold(vae):
+
+def visualize_manifold(vae, x_sample):
     nx = ny = 20
     x_values = np.linspace(-3, 3, nx)
     y_values = np.linspace(-3, 3, ny)
     canvas = np.empty((28 * ny, 28 * nx))
+<<<<<<< HEAD
     list =[]
     for ii, yi in enumerate(x_values):
         for j, xi in enumerate(y_values):
@@ -245,6 +265,15 @@ def visualize_manifold(vae):
                     print(i)
                     canvas[(nx - ii - 1) * 28:(nx - ii) * 28, j *
                                                               28:(j + 1) * 28] = x_mean[i].reshape(28, 28)
+=======
+    z = vae.transform(x_sample)
+    x_mean = vae.generate(z)
+    for ii, yi in enumerate(x_values):
+        for j, xi in enumerate(y_values):
+
+            canvas[(nx - ii - 1) * 28:(nx - ii) * 28, j *
+                                                      28:(j + 1) * 28] = x_mean[j].reshape(28, 28)
+>>>>>>> 6665f80cf68df62f091987aacef2ad61a1446595
     plt.figure(figsize=(8, 10))
     Xi, Yi = np.meshgrid(x_values, y_values)
     plt.imshow(canvas)
@@ -258,12 +287,16 @@ network_architecture = \
          n_input=784,  # MNIST data input (img shape: 28*28)
          latent_z=2)  # dimensionality of latent space
 
+<<<<<<< HEAD
 vae = train(network_architecture, training_epochs=1)
+=======
+vae = train(network_architecture, training_epochs=100)
+>>>>>>> 6665f80cf68df62f091987aacef2ad61a1446595
 
 x_sample, _ = mnist.test.next_batch(100)
 x_reconstruct = vae.reconstruct(x_sample)
 visualize_latent(vae, x_sample)
-visualize_manifold(vae)
+#visualize_manifold(vae, x_sample)
 
 
 plt.figure(figsize=(8, 12))
@@ -277,4 +310,6 @@ for i in range(5):
     plt.title("Reconstruction")
     plt.colorbar()
 plt.tight_layout()
+plt.savefig('reconstruction')
 plt.show()
+

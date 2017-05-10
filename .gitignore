@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 "idea/workspace.xml" 
 
 __pycache__ 
 .idea 
 environment.yml 
 __pycache__ 
+=======
+".idea/workspace.xml"
+"environment.yml"
+"MNIST_data"
+>>>>>>> 6665f80cf68df62f091987aacef2ad61a1446595
