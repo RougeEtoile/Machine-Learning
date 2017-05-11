@@ -1,17 +1,19 @@
 import numpy as np
 import tensorflow as tf
-import input_data
+from tensorflow.examples.tutorials.mnist import input_data
 import matplotlib.pyplot as plt
 import os
-
+import json
 
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 n_samples = mnist.train.num_examples
 np.random.seed(0)
 tf.set_random_seed(0)
 
-os.mkdir(r"plots\5")
-os.chdir(r"plots\5")
+
+path = os.path.join(os.path.curdir, 'plots', 'vis')
+# os.mkdir(path)
+os.chdir(path)
 
 
 class VariationalAutoencoder(object):
@@ -194,7 +196,7 @@ def train(network_architecture, learning_rate=0.001,
     vae = VariationalAutoencoder(network_architecture,
                                  learning_rate=learning_rate,
                                  batch_size=batch_size)
-
+    saver = tf.train.Saver(tf.global_variables())
     costlist = []
     # Training cycle
     for epoch in range(training_epochs):
@@ -213,71 +215,83 @@ def train(network_architecture, learning_rate=0.001,
             print("Epoch:", '%04d' % (epoch + 1),
                   "cost=", "{:.9f}".format(avg_cost))
             costlist.append(avg_cost)
-
+        #Visualizations
+        path = os.path.join(os.path.curdir, str(epoch))
+        # os.mkdir(path)
+        x_sample, _ = mnist.test.next_batch(100)
+        visualize_reconstruction(vae, x_sample, epoch)
+        list_z =[]
+        visualize_latent(vae, x_sample, _, list_z, epoch)
+        visualize_manifold(vae, x_sample, epoch)
+    with open('latent.json', 'a+') as outfile:
+        json.dump(list_z, outfile)
     #plot cost
     thefile = open('final_cost.txt', 'w')
-    thefile.write("%s\n" % costlist[-1])
+    thefile.write("{}\n{}".format(costlist[0], costlist[-1]))
     plt.plot(costlist)
     plt.ylabel('cost')
     plt.xlabel('epoch')
     plt.title('cost per epoch')
     plt.savefig('cost_per_epoch')
-    plt.show()
+    plt.tight_layout()
     plt.close()
     return vae
 
 
-def visualize_latent(vae, x_sample):  # latent must be size 2
+def visualize_latent(vae, x_sample, _, list_z, epoch=100, text=True):  # latent must be size 2
     z = vae.transform(x_sample)
+    list_z.append(z.tolist())
     f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
     im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10",
                     alpha=0.7)
     ax.set_xlabel('First dimension of sampled latent variable $z_1$')
     ax.set_ylabel('Second dimension of sampled latent variable mean $z_2$')
-    ax.set_xlim([-10., 10.])
-    ax.set_ylim([-10., 10.])
+    ax.set_xlim([-4., 4.])
+    ax.set_ylim([-4., 4.])
     f.colorbar(im, ax=ax, label='Digit class')
-    plt.savefig('latent_visualization')
     plt.tight_layout()
+    path = os.path.join(os.path.curdir, str(epoch), 'latent')
+    # plt.savefig(path)
+    plt.close()
 
 
 
-def visualize_manifold(vae, x_sample):
+def visualize_manifold(vae, x_sample, epoch=100):
     nx = ny = 20
     x_values = np.linspace(-3, 3, nx)
     y_values = np.linspace(-3, 3, ny)
-    canvas = np.empty((28 * ny, 28 * nx))
-<<<<<<< HEAD
-    list =[]
-    for ii, yi in enumerate(x_values):
-        for j, xi in enumerate(y_values):
-            np_z = np.array([xi, yi])
-            list.append(np_z)
-            #print(np_z)
-            #x_sample, _ = mnist.test.next_batch(100)
-            #z = vae.transform(x_sample)
-            if len(list) == 100:
-                print("list was made")
-                print(list)
-                x_mean = vae.generate(list)
-                print(x_mean)
-                for i in range(len((x_mean))):
-                    print(i)
-                    canvas[(nx - ii - 1) * 28:(nx - ii) * 28, j *
-                                                              28:(j + 1) * 28] = x_mean[i].reshape(28, 28)
-=======
-    z = vae.transform(x_sample)
-    x_mean = vae.generate(z)
-    for ii, yi in enumerate(x_values):
-        for j, xi in enumerate(y_values):
 
-            canvas[(nx - ii - 1) * 28:(nx - ii) * 28, j *
-                                                      28:(j + 1) * 28] = x_mean[j].reshape(28, 28)
->>>>>>> 6665f80cf68df62f091987aacef2ad61a1446595
+    canvas = np.empty((28 * ny, 28 * nx))
+    for i, yi in enumerate(x_values):
+        for j, xi in enumerate(y_values):
+            z_mu = np.array([[xi, yi]] * vae.batch_size)
+            x_mean = vae.generate(z_mu)
+            canvas[(nx - i - 1) * 28:(nx - i) * 28, j * 28:(j + 1) * 28] = x_mean[0].reshape(28, 28)
+
     plt.figure(figsize=(8, 10))
     Xi, Yi = np.meshgrid(x_values, y_values)
-    plt.imshow(canvas)
+    plt.imshow(canvas, origin="upper", cmap="Greys")
     plt.tight_layout()
+    path = os.path.join(os.path.curdir, str(epoch), 'manifold')
+    # plt.savefig(path)
+    plt.close()
+
+def visualize_reconstruction(vae, x_sample, epoch=100):
+    x_reconstruct = vae.reconstruct(x_sample)
+    plt.figure(figsize=(8, 12))
+    for i in range(5):
+        plt.subplot(5, 2, 2*i + 1)
+        plt.imshow(x_sample[i].reshape(28, 28), vmin=0, vmax=1)
+        plt.title("Test input")
+        plt.colorbar()
+        plt.subplot(5, 2, 2*i + 2)
+        plt.imshow(x_reconstruct[i].reshape(28, 28), vmin=0, vmax=1)
+        plt.title("Reconstruction")
+        plt.colorbar()
+    plt.tight_layout()
+    path = os.path.join(os.path.curdir, str(epoch), 'reconstruction')
+    # plt.savefig(path)
+    plt.close()
 
 network_architecture = \
     dict(encoder_1=500,  # 1st layer encoder neurons
@@ -287,29 +301,12 @@ network_architecture = \
          n_input=784,  # MNIST data input (img shape: 28*28)
          latent_z=2)  # dimensionality of latent space
 
-<<<<<<< HEAD
-vae = train(network_architecture, training_epochs=1)
-=======
-vae = train(network_architecture, training_epochs=100)
->>>>>>> 6665f80cf68df62f091987aacef2ad61a1446595
 
-x_sample, _ = mnist.test.next_batch(100)
-x_reconstruct = vae.reconstruct(x_sample)
-visualize_latent(vae, x_sample)
+vae = train(network_architecture, training_epochs=2)
+
+
+#x_sample, _ = mnist.test.next_batch(100)
+#x_reconstruct = vae.reconstruct(x_sample)
+#visualize_latent(vae, x_sample)
 #visualize_manifold(vae, x_sample)
-
-
-plt.figure(figsize=(8, 12))
-for i in range(5):
-    plt.subplot(5, 2, 2*i + 1)
-    plt.imshow(x_sample[i].reshape(28, 28), vmin=0, vmax=1)
-    plt.title("Test input")
-    plt.colorbar()
-    plt.subplot(5, 2, 2*i + 2)
-    plt.imshow(x_reconstruct[i].reshape(28, 28), vmin=0, vmax=1)
-    plt.title("Reconstruction")
-    plt.colorbar()
-plt.tight_layout()
-plt.savefig('reconstruction')
-plt.show()
 
