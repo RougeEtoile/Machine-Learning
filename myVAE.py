@@ -2,7 +2,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import matplotlib.pyplot as plt
-from bokeh.charts import Scatter, output_file, show
+from bokeh.plotting import figure, output_file, show
+from bokeh.palettes import Paired10 as palette
 import os
 import json
 
@@ -174,7 +175,7 @@ class VariationalAutoencoder(object):
         return self.sess.run(self.z_mean, feed_dict={self.x: X})
 
     def generate(self, z_mu=None):
-        """ Generate data by sampling from latent space.
+        """ Ge_nerate data by sampling from latent space.
 
         If z_mu is not None, data for this point in latent space is
         generated. Otherwise, z_mu is drawn from prior in latent
@@ -193,11 +194,9 @@ class VariationalAutoencoder(object):
                              feed_dict={self.x: X})
 
 
-def train(network_architecture, learning_rate=0.001,
+def train(model, learning_rate=0.001,
           batch_size=100, training_epochs=10, display_step=1):
-    vae = VariationalAutoencoder(network_architecture,
-                                 learning_rate=learning_rate,
-                                 batch_size=batch_size)
+    vae = model
     saver = tf.train.Saver()
     costlist = []
     # Training cycle
@@ -230,7 +229,7 @@ def train(network_architecture, learning_rate=0.001,
     #with open('latent.json', 'a+') as outfile:
      #   json.dump(list_z, outfile)
     #plot cost
-    thefile = open('final_cost.txt', 'w')
+    '''thefile = open('final_cost.txt', 'w')
     thefile.write("{}\n{}".format(costlist[0], costlist[-1]))
     plt.plot(costlist)
     plt.ylabel('cost')
@@ -238,18 +237,25 @@ def train(network_architecture, learning_rate=0.001,
     plt.title('cost per epoch')
     plt.savefig('cost_per_epoch')
     plt.tight_layout()
-    plt.close()
+    plt.close()'''
 
     path = os.path.join(os.path.curdir, 'model')
     #os.mkdir(path)
-    os.chdir(path)
-    saver.save(vae.sess, "model.ckpt")
+    #os.chdir(path)
+    #saver.save(vae.sess, "model.ckpt")
     return vae
 
 
-def visualize_latent(vae, x_sample, _, list_z, epoch=100, text=True):  # latent must be size 2
-    z = vae.transform(x_sample)
+def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # latent must be size 2
+    z = model.transform(x_sample)
+    ez = z.tolist()
+    print(ez)
     list_z.append(z.tolist())
+    p = figure(plot_width=400, plot_height=400)
+    colors = [palette[x] for x in (np.argmax(_, 1))]
+
+    p.circle(z[:,0], z[:,1], size=20, color=colors, legend=True, alpha=0.7)
+    show(p)
     f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
     im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10",
                     alpha=0.7)
@@ -264,7 +270,7 @@ def visualize_latent(vae, x_sample, _, list_z, epoch=100, text=True):  # latent 
     plt.close()
 
 
-def visualize_manifold(vae, x_sample, epoch=100):
+def visualize_manifold(model, x_sample, epoch=100):
     nx = ny = 20
     x_values = np.linspace(-3, 3, nx)
     y_values = np.linspace(-3, 3, ny)
@@ -272,8 +278,8 @@ def visualize_manifold(vae, x_sample, epoch=100):
     canvas = np.empty((28 * ny, 28 * nx))
     for i, yi in enumerate(x_values):
         for j, xi in enumerate(y_values):
-            z_mu = np.array([[xi, yi]] * vae.batch_size)
-            x_mean = vae.generate(z_mu)
+            z_mu = np.array([[xi, yi]] * model.batch_size)
+            x_mean = model.generate(z_mu)
             canvas[(nx - i - 1) * 28:(nx - i) * 28, j * 28:(j + 1) * 28] = x_mean[0].reshape(28, 28)
 
     plt.figure(figsize=(8, 10))
@@ -285,8 +291,8 @@ def visualize_manifold(vae, x_sample, epoch=100):
     plt.close()
 
 
-def visualize_reconstruction(vae, x_sample, epoch=100):
-    x_reconstruct = vae.reconstruct(x_sample)
+def visualize_reconstruction(model, x_sample, epoch=100):
+    x_reconstruct = model.reconstruct(x_sample)
     plt.figure(figsize=(8, 12))
     for i in range(5):
         plt.subplot(5, 2, 2*i + 1)
@@ -302,17 +308,20 @@ def visualize_reconstruction(vae, x_sample, epoch=100):
     # plt.savefig(path)
     plt.close()
 
-network_architecture = \
-    dict(encoder_1=500,  # 1st layer encoder neurons
-         encoder_2=500,  # 2nd layer encoder neurons
-         decoder_1=500,  # 1st layer decoder neurons
-         decoder_2=500,  # 2nd layer decoder neurons
-         n_input=784,  # MNIST data input (img shape: 28*28)
-         latent_z=2)  # dimensionality of latent space
+if __name__ == '__main__':
+    network_architecture = \
+        dict(encoder_1=500,  # 1st layer encoder neurons
+             encoder_2=500,  # 2nd layer encoder neurons
+             decoder_1=500,  # 1st layer decoder neurons
+             decoder_2=500,  # 2nd layer decoder neurons
+             n_input=784,  # MNIST data input (img shape: 28*28)
+             latent_z=2)  # dimensionality of latent space
 
+    vae = VariationalAutoencoder(network_architecture)
+    train(vae, training_epochs=1)
 
 #x_sample, _ = mnist.test.next_batch(100)
 #x_reconstruct = vae.reconstruct(x_sample)
-#visualize_latent(vae, x_sample)
+#visualize_latent(vae, x_sample, _, list_z=list)
 #visualize_manifold(vae, x_sample)
 
