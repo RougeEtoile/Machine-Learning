@@ -2,8 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import matplotlib.pyplot as plt
-from bokeh.plotting import figure, output_file, show
-from bokeh.palettes import Paired10 as palette
+import mpld3
 import os
 import json
 
@@ -22,27 +21,35 @@ class VariationalAutoencoder(object):
 
     def __init__(self, network_architecture, restore=False, activation_fct=tf.nn.relu,
                  learning_rate=0.001, batch_size=100):
+        if restore:
+            print("Loading previously trained network")
+            self.network_architecture = network_architecture
+            new_saver = tf.train.import_meta_graph(os.path.join(os.path.curdir, 'model') +'\model.cpkt.meta')
+            new_saver.restore(vae.sess, tf.train.latest_checkpoint('main/model/checkpoint'))
+            # Launch the session
+            self.sess = tf.InteractiveSession()
 
-        self.network_architecture = network_architecture
-        self.activation_fct = activation_fct
-        self.learning_rate = learning_rate
-        self.batch_size = batch_size
+        else:
+            self.network_architecture = network_architecture
+            self.activation_fct = activation_fct
+            self.learning_rate = learning_rate
+            self.batch_size = batch_size
 
-        # tf Graph input
-        self.x = tf.placeholder(tf.float32, [None, network_architecture["n_input"]])
+            # tf Graph input
+            self.x = tf.placeholder(tf.float32, [None, network_architecture["n_input"]])
 
-        # Create autoencoder network
-        self._create_network()
-        # Define loss function based variational upper-bound and
-        # corresponding optimizer
-        self._create_loss_optimizer()
+            # Create autoencoder network
+            self._create_network()
+            # Define loss function based variational upper-bound and
+            # corresponding optimizer
+            self._create_loss_optimizer()
 
-        # Initializing the tensor flow variables
-        init = tf.global_variables_initializer()
+            # Initializing the tensor flow variables
+            init = tf.global_variables_initializer()
 
-        # Launch the session
-        self.sess = tf.InteractiveSession()
-        self.sess.run(init)
+            # Launch the session
+            self.sess = tf.InteractiveSession()
+            self.sess.run(init)
 
     def _create_network(self):
         # Initialize autoencode network weights and biases
@@ -249,13 +256,14 @@ def train(model, learning_rate=0.001,
 def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # latent must be size 2
     z = model.transform(x_sample)
     ez = z.tolist()
-    print(ez)
-    list_z.append(z.tolist())
+    #print(ez)
+
+    '''list_z.append(z.tolist())
     p = figure(plot_width=400, plot_height=400)
     colors = [palette[x] for x in (np.argmax(_, 1))]
-
-    p.circle(z[:,0], z[:,1], size=20, color=colors, legend=True, alpha=0.7)
+    p.circle(z[:,0], z[:,1], size=20, color=colors, alpha=0.7)
     show(p)
+    print("yo")'''
     f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
     im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10",
                     alpha=0.7)
@@ -265,9 +273,12 @@ def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # laten
     ax.set_ylim([-4., 4.])
     f.colorbar(im, ax=ax, label='Digit class')
     plt.tight_layout()
+    #print(mpld3.fig_to_html(f))
+    print("yo")
+    mpld3.show()
     path = os.path.join(os.path.curdir, str(epoch), 'latent')
     # plt.savefig(path)
-    plt.close()
+    #plt.close()
 
 
 def visualize_manifold(model, x_sample, epoch=100):
@@ -286,14 +297,16 @@ def visualize_manifold(model, x_sample, epoch=100):
     Xi, Yi = np.meshgrid(x_values, y_values)
     plt.imshow(canvas, origin="upper", cmap="Greys")
     plt.tight_layout()
+    mpld3.show()
     path = os.path.join(os.path.curdir, str(epoch), 'manifold')
     # plt.savefig(path)
-    plt.close()
+    #plt.close()
 
 
 def visualize_reconstruction(model, x_sample, epoch=100):
     x_reconstruct = model.reconstruct(x_sample)
     plt.figure(figsize=(8, 12))
+
     for i in range(5):
         plt.subplot(5, 2, 2*i + 1)
         plt.imshow(x_sample[i].reshape(28, 28), vmin=0, vmax=1)
@@ -304,6 +317,7 @@ def visualize_reconstruction(model, x_sample, epoch=100):
         plt.title("Reconstruction")
         plt.colorbar()
     plt.tight_layout()
+    #mpld3.show()
     path = os.path.join(os.path.curdir, str(epoch), 'reconstruction')
     # plt.savefig(path)
     plt.close()
@@ -318,7 +332,8 @@ if __name__ == '__main__':
              latent_z=2)  # dimensionality of latent space
 
     vae = VariationalAutoencoder(network_architecture)
-    train(vae, training_epochs=1)
+    train(vae,training_epochs=1)
+
 
 #x_sample, _ = mnist.test.next_batch(100)
 #x_reconstruct = vae.reconstruct(x_sample)

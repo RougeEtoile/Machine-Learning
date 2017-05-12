@@ -10,8 +10,8 @@ n_samples = mnist.train.num_examples
 np.random.seed(0)
 tf.set_random_seed(0)
 
-os.mkdir(r"plots\8")
-os.chdir(r"plots\8")
+os.mkdir(r"plots\9")
+os.chdir(r"plots\9")
 
 
 class VariationalAutoencoder(object):
@@ -289,14 +289,14 @@ network_architecture = \
          decoder_3=500,  # 3nd layer decoder neurons
          decoder_4=500,  # 3nd layer decoder neurons
          n_input=784,  # MNIST data input (img shape: 28*28)
-         latent_z=10)  # dimensionality of latent space
+         latent_z=2)  # dimensionality of latent space
 
-vae = train(network_architecture, training_epochs=100)
+vae = train(network_architecture, training_epochs=500)
 
 x_sample, _ = mnist.test.next_batch(100)
 x_reconstruct = vae.reconstruct(x_sample)
-#visualize_latent(vae, x_sample)
-#visualize_manifold(vae, x_sample)
+visualize_latent(vae, x_sample)
+visualize_manifold(vae, x_sample)
 
 
 plt.figure(figsize=(8, 12))
