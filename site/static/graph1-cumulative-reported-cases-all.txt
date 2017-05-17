@@ -1,0 +1,7 @@
+language	frequency
+Python	10
+C++	8
+Java	6
+Perl	4
+Scala	2
+Lisp	1

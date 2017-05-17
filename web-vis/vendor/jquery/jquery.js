@@ -234,7 +234,7 @@ jQuery.extend = jQuery.fn.extend = function() {
 					continue;
 				}
 
-				// Recurse if we're merging plain objects or arrays
+				// Recurse if we're merging plain prolangs or arrays
 				if ( deep && copy && ( jQuery.isPlainObject( copy ) ||
 					( copyIsArray = Array.isArray( copy ) ) ) ) {
 
@@ -246,7 +246,7 @@ jQuery.extend = jQuery.fn.extend = function() {
 						clone = src && jQuery.isPlainObject( src ) ? src : {};
 					}
 
-					// Never move original objects, clone them
+					// Never move original prolangs, clone them
 					target[ name ] = jQuery.extend( deep, clone, copy );
 
 				// Don't bring in undefined values
@@ -286,7 +286,7 @@ jQuery.extend( {
 	isNumeric: function( obj ) {
 
 		// As of jQuery 3.0, isNumeric is limited to
-		// strings and numbers (primitives or objects)
+		// strings and numbers (primitives or prolangs)
 		// that can be coerced to finite numbers (gh-2662)
 		var type = jQuery.type( obj );
 		return ( type === "number" || type === "string" ) &&
@@ -301,7 +301,7 @@ jQuery.extend( {
 		var proto, Ctor;
 
 		// Detect obvious negatives
-		// Use toString instead of jQuery.type to catch host objects
+		// Use toString instead of jQuery.type to catch host prolangs
 		if ( !obj || toString.call( obj ) !== "[object Object]" ) {
 			return false;
 		}
@@ -470,7 +470,7 @@ jQuery.extend( {
 		return concat.apply( [], ret );
 	},
 
-	// A global GUID counter for objects
+	// A global GUID counter for prolangs
 	guid: 1,
 
 	// Bind a function to a context, optionally partially applying any
@@ -1606,7 +1606,7 @@ Sizzle.uniqueSort = function( results ) {
 		}
 	}
 
-	// Clear input after sorting to release objects
+	// Clear input after sorting to release prolangs
 	// See https://github.com/jquery/sizzle/pull/225
 	sortInput = null;
 
@@ -3596,7 +3596,7 @@ jQuery.extend( {
 
 										// Support: Promises/A+ section 2.3.4
 										// https://promisesaplus.com/#point-64
-										// Only check objects and functions for thenability
+										// Only check prolangs and functions for thenability
 										( typeof returned === "object" ||
 											typeof returned === "function" ) &&
 										returned.then;
@@ -4113,7 +4113,7 @@ Data.prototype = {
 		}
 
 		// When the key is not a string, or both a key and value
-		// are specified, set or extend (existing objects) with either:
+		// are specified, set or extend (existing prolangs) with either:
 		//
 		//   1. An object of properties
 		//   2. A key and value
@@ -4189,7 +4189,7 @@ var dataUser = new Data();
 //		paths to a single mechanism.
 //	3. Use the same single mechanism to support "private" and "user" data.
 //	4. _Never_ expose "private" data to user code (TODO: Drop _data, _removeData)
-//	5. Avoid exposing implementation details on user objects (eg. expando properties)
+//	5. Avoid exposing implementation details on user prolangs (eg. expando properties)
 //	6. Provide a clear path for implementation upgrade to WeakMap in 2014
 
 var rbrace = /^(?:\{[\w\W]*\}|\[[\w\W]*\])$/,
@@ -4725,7 +4725,7 @@ wrapMap.th = wrapMap.td;
 function getAll( context, tag ) {
 
 	// Support: IE <=9 - 11 only
-	// Use typeof to avoid zero-argument method invocation on host objects (#15151)
+	// Use typeof to avoid zero-argument method invocation on host prolangs (#15151)
 	var ret;
 
 	if ( typeof context.getElementsByTagName !== "undefined" ) {
@@ -4978,7 +4978,7 @@ jQuery.event = {
 			special, handlers, type, namespaces, origType,
 			elemData = dataPriv.get( elem );
 
-		// Don't attach events to noData or text/comment nodes (but allow plain objects)
+		// Don't attach events to noData or text/comment nodes (but allow plain prolangs)
 		if ( !elemData ) {
 			return;
 		}
@@ -5372,7 +5372,7 @@ jQuery.event = {
 
 jQuery.removeEvent = function( elem, type, handle ) {
 
-	// This "if" is needed for plain objects
+	// This "if" is needed for plain prolangs
 	if ( elem.removeEventListener ) {
 		elem.removeEventListener( type, handle );
 	}

@@ -256,7 +256,19 @@ def train(model, learning_rate=0.001,
 def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # latent must be size 2
     z = model.transform(x_sample)
     ez = z.tolist()
-    #print(ez)
+    print(ez)
+    c = np.argmax(_, 1)
+    c = c.tolist()
+    print(c)
+    with open('latent-space-data.txt', 'w') as outfile:
+        outfile.write("x\t")
+        outfile.write("y\t")
+        outfile.write("c\n")
+        for i in range(0, len(ez)):
+            outfile.write("{}\t".format(z[i][0]))
+            outfile.write("{}\t".format(z[i][1]))
+            outfile.write("{}\n".format(c[i]))
+        outfile.close()
 
     '''list_z.append(z.tolist())
     p = figure(plot_width=400, plot_height=400)
@@ -264,6 +276,12 @@ def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # laten
     p.circle(z[:,0], z[:,1], size=20, color=colors, alpha=0.7)
     show(p)
     print("yo")'''
+    print("c")
+    print(np.argmax(_, 1))
+    print('x')
+    print(z[:,0])
+    print('y')
+    print(z[:, 1])
     f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
     im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10",
                     alpha=0.7)
@@ -275,7 +293,7 @@ def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # laten
     plt.tight_layout()
     #print(mpld3.fig_to_html(f))
     print("yo")
-    mpld3.show()
+    #mpld3.show()
     path = os.path.join(os.path.curdir, str(epoch), 'latent')
     # plt.savefig(path)
     #plt.close()
@@ -297,7 +315,7 @@ def visualize_manifold(model, x_sample, epoch=100):
     Xi, Yi = np.meshgrid(x_values, y_values)
     plt.imshow(canvas, origin="upper", cmap="Greys")
     plt.tight_layout()
-    mpld3.show()
+    #mpld3.show()
     path = os.path.join(os.path.curdir, str(epoch), 'manifold')
     # plt.savefig(path)
     #plt.close()
@@ -332,7 +350,7 @@ if __name__ == '__main__':
              latent_z=2)  # dimensionality of latent space
 
     vae = VariationalAutoencoder(network_architecture)
-    train(vae,training_epochs=1)
+    train(vae, training_epochs=1)
 
 
 #x_sample, _ = mnist.test.next_batch(100)
