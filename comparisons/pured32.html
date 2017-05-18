@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style type="text/css">
+body {
+  margin: 0;
+  font-family: arial, sans;
+}
+
+.label {
+  font-size: 15px;
+}
+
+.legend{
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+
+.legend text,
+.axis text {
+  font-size: 13px;
+  fill: #333;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke-width:1px;
+  stroke: #e7e7e7;
+}
+
+circle {
+  stroke: #fff;
+}
+
+.bubble {
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+
+.bubble text {
+  opacity: 0;
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.bubble:hover text {
+  opacity: 1;
+}
+
+.bubble:hover circle {
+  fill-opacity: 1;
+}
+
+</style>
+<body>
+</body>
+
+<script src="//d3js.org/d3.v4.0.0-alpha.35.min.js"></script>
+<script>
+var margin = { top: 30, right: 50, bottom: 40, left: 50 };
+var width = 960 - margin.left - margin.right;
+var height = 500 - margin.top - margin.bottom;
+
+var svg = d3.select("body")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var xscale = d3.scaleLinear()
+  .domain([-4,4])
+  .range([0,width]);
+
+var yscale = d3.scaleLinear()
+  .domain([-10,15])
+  .range([height,0]);
+
+var xAxis = d3.axisBottom()
+  .tickSize(-height)
+  .scale(xscale);
+
+var yAxis = d3.axisLeft()
+  .tickSize(-width)
+  .scale(yscale);
+
+var color = d3.scaleCategory10();
+
+d3.tsv("/static/latent-space-data.txt", function(error, data) {
+  console.log(data);
+  // data pre-processing
+  data.forEach(function(d) {
+    d.y = +d["y"];
+    d.x = +d["x"];
+
+  });
+
+  data.sort(function(a,b) { return b.c - a.c; });
+
+  yscale.domain(d3.extent(data, function(d) {
+    return d.y;
+  })).nice();
+
+  svg.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .attr("class", "x axis")
+    .call(xAxis);
+
+  svg.append("g")
+    .attr("transform", "translate(0,0)")
+    .attr("class", "y axis")
+    .call(yAxis);
+
+  var group = svg.selectAll("g.bubble")
+    .data(data)
+    .enter().append("g")
+    .attr("class", "bubble")
+    .style("opacity", 0.7)
+    .attr("transform", function(d) {
+      return "translate(" + xscale(d.x) + "," + yscale(d.y) + ")"
+    });
+
+  group
+    .append("circle")
+    .attr("r", 10)
+    .style("fill", function(d) {
+      return color(d["c"]);
+    });
+
+  group
+    .append("text")
+    .attr("x", function(d) { return 10; })
+    .attr("alignment-baseline", "middle")
+    .text(function(d) {
+      return d["x"] + ", " + d["y"];
+    });
+
+  svg.append("text")
+    .attr("x", 6)
+    .attr("y", -2)
+    .attr("class", "label")
+    .text("Dimension 1");
+
+  svg.append("text")
+    .attr("x", width-2)
+    .attr("y", height-6)
+    .attr("text-anchor", "end")
+    .attr("class", "label")
+    .text("Dimension 2");
+
+  var legend = svg.selectAll(".legend")
+      .data(color.domain())
+    .enter().append("g")
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { return "translate(2," + i * 14 + ")"; });
+
+  legend.append("rect")
+      .attr("x", width)
+      .attr("width", 12)
+      .attr("height", 12)
+      .style("fill", color);
+
+  legend.append("text")
+      .attr("x", width + 16)
+      .attr("y", 6)
+      .attr("dy", ".35em")
+      .style("text-anchor", "start")
+      .text(function(d) { return d; });
+
+  legend.on("mouseover", function(type) {
+      d3.selectAll(".legend")
+        .style("opacity", 0.1);
+      d3.select(this)
+        .style("opacity", 1);
+      d3.selectAll(".bubble")
+        .style("opacity", 0.1)
+        .filter(function(d) { return d["c"] == type; })
+        .style("opacity", 1);
+    })
+    .on("mouseout", function(type) {
+      d3.selectAll(".legend")
+        .style("opacity", 1);
+      d3.selectAll(".bubble")
+        .style("opacity", 1);
+    });
+});
+</script>

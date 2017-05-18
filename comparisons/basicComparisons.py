@@ -5,13 +5,15 @@ import mpld3
 
 prolangs = ('Python', 'C++', 'Java', 'Perl', 'Scala', 'Lisp')
 y_pos = np.arange(len(prolangs))
+fig = plt.figure()
 performance = [10, 8, 6, 4, 2, 1]
 plt.bar(y_pos, performance, align='center', alpha=0.5)
 plt.xticks(y_pos, prolangs)
 plt.ylabel('Usage')
 plt.title('Programming language usage')
-#mpld3.fig_to_html(plt.gcf())
-plt.show()
+# mpld3.fig_to_html(plt.gcf())
+mpld3.show(fig)
+
 # Bokeh
 from bokeh.charts import Bar, show
 import pandas as pd
@@ -19,7 +21,7 @@ import pandas as pd
 dictionary = {'languages': prolangs, 'values': performance}
 df = pd.DataFrame(dictionary)
 
-p = Bar(df, 'languages', values='values', title='Programming language usage', sort=False)
+p = Bar(df, 'languages', values='values', title='Programming language usage')
 show(p)
 
 # d3
@@ -75,7 +77,7 @@ var xAxis = d3.svg.axis()
 var yAxis = d3.svg.axis()
     .scale(y)
     .orient("left")
-    .ticks(10, "");
+    .ticks(10, "");http://127.0.0.1:5000/pured3
 
 var svg = d3.select("body").append("svg")
 		.attr("width", width + margin.left + margin.right)

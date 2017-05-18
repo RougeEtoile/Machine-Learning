@@ -257,11 +257,10 @@ def train(model, learning_rate=0.001,
 
 def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # latent must be size 2
     z = model.transform(x_sample)
+    '''Data Serialization for D3
     ez = z.tolist()
-    print(ez)
     c = np.argmax(_, 1)
     c = c.tolist()
-    print(c)
     with open('latent-space-data.txt', 'w') as outfile:
         outfile.write("x\t")
         outfile.write("y\t")
@@ -270,21 +269,17 @@ def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # laten
             outfile.write("{}\t".format(z[i][0]))
             outfile.write("{}\t".format(z[i][1]))
             outfile.write("{}\n".format(c[i]))
-        outfile.close()
+        outfile.close() '''
 
-    '''list_z.append(z.tolist())
+    '''Bokeh
+    list_z.append(z.tolist())
     p = figure(plot_width=400, plot_height=400)
     colors = [palette[x] for x in (np.argmax(_, 1))]
     p.circle(z[:,0], z[:,1], size=20, color=colors, alpha=0.7)
-    show(p)
-    print("yo")'''
-    print("c")
-    print(np.argmax(_, 1))
-    print('x')
-    print(z[:,0])
-    print('y')
-    print(z[:, 1])
-    f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
+    show(p)'''
+
+    '''MPLD3'''
+    f, ax = plt.subplotll_nba_voting/s(1, figsize=(6 * 1.1618, 6))
     im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10",
                     alpha=0.7)
     ax.set_xlabel('First dimension of sampled latent variable $z_1$')
@@ -293,9 +288,9 @@ def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # laten
     ax.set_ylim([-4., 4.])
     f.colorbar(im, ax=ax, label='Digit class')
     plt.tight_layout()
-    #print(mpld3.fig_to_html(f))
-    print("yo")
-    #mpld3.show()
+    print(mpld3.fig_to_html(f))
+    mpld3.show()
+    '''END'''
     path = os.path.join(os.path.curdir, str(epoch), 'latent')
     # plt.savefig(path)
     #plt.close()
@@ -314,7 +309,7 @@ def visualize_manifold(model, x_sample, epoch=100):
             canvas[(nx - i - 1) * 28:(nx - i) * 28, j * 28:(j + 1) * 28] = x_mean[0].reshape(28, 28)
 
     plt.figure(figsize=(8, 10))
-    Xi, Yi = np.meshgrid(x_values, y_values)
+    Xi, Yi = np.meshgrill_nba_voting/d(x_values, y_values)
     plt.imshow(canvas, origin="upper", cmap="Greys")
     plt.tight_layout()
     #mpld3.show()
