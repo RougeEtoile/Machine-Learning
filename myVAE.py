@@ -24,10 +24,12 @@ class VariationalAutoencoder(object):
         if restore:
             print("Loading previously trained network")
             self.network_architecture = network_architecture
-            new_saver = tf.train.import_meta_graph(os.path.join(os.path.curdir, 'model') +'\model.cpkt.meta')
-            new_saver.restore(vae.sess, tf.train.latest_checkpoint('main/model/checkpoint'))
+            self.sess = tf.Session()
+            new_saver = tf.train.import_meta_graph(os.path.join(os.path.curdir, 'model', 'model.ckpt.meta'))
+            new_saver.restore(self.sess, tf.train.latest_checkpoint(os.path.join(os.path.curdir, 'model', './')))
+            self.sess.run(tf.global_variables_initializer())
+            self._create_loss_optimizer()
             # Launch the session
-            self.sess = tf.InteractiveSession()
 
         else:
             self.network_architecture = network_architecture
@@ -227,11 +229,11 @@ def train(model, learning_rate=0.001,
         #Visualizations
         path = os.path.join(os.path.curdir, str(epoch))
         # os.mkdir(path)
-        x_sample, _ = mnist.test.next_batch(100)
-        visualize_reconstruction(vae, x_sample, epoch)
-        list_z =[]
-        visualize_latent(vae, x_sample, _, list_z, epoch)
-        visualize_manifold(vae, x_sample, epoch)
+        #x_sample, _ = mnist.test.next_batch(100)
+        #visualize_reconstruction(vae, x_sample, epoch)
+        #list_z =[]
+        #visualize_latent(vae, x_sample, _, list_z, epoch)
+        #visualize_manifold(vae, x_sample, epoch)
 
     #with open('latent.json', 'a+') as outfile:
      #   json.dump(list_z, outfile)
@@ -350,11 +352,7 @@ if __name__ == '__main__':
              latent_z=2)  # dimensionality of latent space
 
     vae = VariationalAutoencoder(network_architecture)
-    train(vae, training_epochs=1)
-
-
-#x_sample, _ = mnist.test.next_batch(100)
-#x_reconstruct = vae.reconstruct(x_sample)
-#visualize_latent(vae, x_sample, _, list_z=list)
-#visualize_manifold(vae, x_sample)
-
+    train(vae, training_epochs=100)
+    x_sample, _ = mnist.test.next_batch(100)
+    list_z =[]
+    visualize_latent(vae, x_sample, _, list_z)
