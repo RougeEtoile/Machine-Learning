@@ -207,12 +207,23 @@ def train(model, learning_rate=0.001,
           batch_size=100, training_epochs=10, display_step=1):
     vae = model
     #plt.ion()
+    x_sample, _ = mnist.test.next_batch(100)
     saver = tf.train.Saver()
     costlist = []
-    '''plt.plot(costlist)
+    plt.plot(costlist)
     plt.ylabel('cost')
     plt.xlabel('epoch')
-    plt.title('cost per epoch')'''
+    plt.title('cost per epoch')
+
+    '''z = vae.transform(x_sample)
+    f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
+    im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10",
+                    alpha=0.7)
+    ax.set_xlabel('First dimension of sampled latent variable $z_1$')
+    ax.set_ylabel('Second dimension of sampled latent variable mean $z_2$')
+    ax.set_xlim([-4., 4.])
+    ax.set_ylim([-4., 4.])
+    f.colorbar(im, ax=ax, label='Digit class')'''
     # Training cycle
     for epoch in range(training_epochs):
         avg_cost = 0.
@@ -230,9 +241,10 @@ def train(model, learning_rate=0.001,
             print("Epoch:", '%04d' % (epoch + 1),
                   "cost=", "{:.9f}".format(avg_cost))
             costlist.append(avg_cost)
-            ''' plt.plot(costlist)
+            plt.plot(costlist)
             plt.draw()
-            plt.pause(0.00001)'''
+            plt.pause(0.00001)
+            #visualize_latent(vae,z, ax, x_sample,_)        	   
 
         #Visualizations
         path = os.path.join(os.path.curdir, str(epoch))
@@ -263,19 +275,15 @@ def train(model, learning_rate=0.001,
     return vae
 
 
-def visualize_latent(vae, x_sample,_):  # latent must be size 2
+def visualize_latent(vae, z, ax, x_sample,_):  # latent must be size 2
     z = vae.transform(x_sample)
-    f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
-    im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10",
-                    alpha=0.7)
-    ax.set_xlabel('First dimension of sampled latent variable $z_1$')
-    ax.set_ylabel('Second dimension of sampled latent variable mean $z_2$')
-    ax.set_xlim([-4., 4.])
-    ax.set_ylim([-4., 4.])
-    f.colorbar(im, ax=ax, label='Digit class')
+    plt.cla()
+    im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10", alpha =0.7)	
     #plt.savefig('latent_visualization')
-    plt.tight_layout()
-    plt.show()
+    plt.draw()
+    plt.pause(0.000001) 
+    # plt.tight_layout()
+    #plt.show()
 
 
 def visualize_manifold(model, x_sample, epoch=100):
@@ -329,12 +337,4 @@ if __name__ == '__main__':
              latent_z=2)  # dimensionality of latent space
 
     vae = VariationalAutoencoder(network_architecture)
-    #ani
-    #train(vae, training_epochs=10)
-    costlist = []
-    fig = plt.plot(costlist)
-    plt.ylabel('cost')
-    plt.xlabel('epoch')
-    plt.title('cost per epoch')
-    ani = animation.FuncAnimation(fig, train(vae,training_epochs=3 ))
-    plt.show()
+    train(vae, training_epochs=10)
