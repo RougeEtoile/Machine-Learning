@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import matplotlib.pyplot as plt
-import mpld3
+import matplotlib.animation as animation
 import os
 import json
 
@@ -206,8 +206,13 @@ class VariationalAutoencoder(object):
 def train(model, learning_rate=0.001,
           batch_size=100, training_epochs=10, display_step=1):
     vae = model
+    #plt.ion()
     saver = tf.train.Saver()
     costlist = []
+    '''plt.plot(costlist)
+    plt.ylabel('cost')
+    plt.xlabel('epoch')
+    plt.title('cost per epoch')'''
     # Training cycle
     for epoch in range(training_epochs):
         avg_cost = 0.
@@ -225,14 +230,17 @@ def train(model, learning_rate=0.001,
             print("Epoch:", '%04d' % (epoch + 1),
                   "cost=", "{:.9f}".format(avg_cost))
             costlist.append(avg_cost)
+            ''' plt.plot(costlist)
+            plt.draw()
+            plt.pause(0.00001)'''
 
         #Visualizations
         path = os.path.join(os.path.curdir, str(epoch))
         # os.mkdir(path)
-        #x_sample, _ = mnist.test.next_batch(100)
+        x_sample, _ = mnist.test.next_batch(100)
         #visualize_reconstruction(vae, x_sample, epoch)
-        #list_z =[]
-        #visualize_latent(vae, x_sample, _, list_z, epoch)
+        list_z = []
+       # visualize_latent(vae, x_sample=x_sample, _=_)
         #visualize_manifold(vae, x_sample, epoch)
 
     #with open('latent.json', 'a+') as outfile:
@@ -255,31 +263,9 @@ def train(model, learning_rate=0.001,
     return vae
 
 
-def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # latent must be size 2
-    z = model.transform(x_sample)
-    '''Data Serialization for D3
-    ez = z.tolist()
-    c = np.argmax(_, 1)
-    c = c.tolist()
-    with open('latent-space-data.txt', 'w') as outfile:
-        outfile.write("x\t")
-        outfile.write("y\t")
-        outfile.write("c\n")
-        for i in range(0, len(ez)):
-            outfile.write("{}\t".format(z[i][0]))
-            outfile.write("{}\t".format(z[i][1]))
-            outfile.write("{}\n".format(c[i]))
-        outfile.close() '''
-
-    '''Bokeh
-    list_z.append(z.tolist())
-    p = figure(plot_width=400, plot_height=400)
-    colors = [palette[x] for x in (np.argmax(_, 1))]
-    p.circle(z[:,0], z[:,1], size=20, color=colors, alpha=0.7)
-    show(p)'''
-
-    '''MPLD3'''
-    f, ax = plt.subplotll_nba_voting/s(1, figsize=(6 * 1.1618, 6))
+def visualize_latent(vae, x_sample,_):  # latent must be size 2
+    z = vae.transform(x_sample)
+    f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
     im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10",
                     alpha=0.7)
     ax.set_xlabel('First dimension of sampled latent variable $z_1$')
@@ -287,13 +273,9 @@ def visualize_latent(model, x_sample, _, list_z, epoch=100, text=True):  # laten
     ax.set_xlim([-4., 4.])
     ax.set_ylim([-4., 4.])
     f.colorbar(im, ax=ax, label='Digit class')
+    #plt.savefig('latent_visualization')
     plt.tight_layout()
-    print(mpld3.fig_to_html(f))
-    mpld3.show()
-    '''END'''
-    path = os.path.join(os.path.curdir, str(epoch), 'latent')
-    # plt.savefig(path)
-    #plt.close()
+    plt.show()
 
 
 def visualize_manifold(model, x_sample, epoch=100):
@@ -309,10 +291,10 @@ def visualize_manifold(model, x_sample, epoch=100):
             canvas[(nx - i - 1) * 28:(nx - i) * 28, j * 28:(j + 1) * 28] = x_mean[0].reshape(28, 28)
 
     plt.figure(figsize=(8, 10))
-    Xi, Yi = np.meshgrill_nba_voting/d(x_values, y_values)
+    Xi, Yi = np.meshgrid(x_values, y_values)
     plt.imshow(canvas, origin="upper", cmap="Greys")
     plt.tight_layout()
-    #mpld3.show()
+    plt.show()
     path = os.path.join(os.path.curdir, str(epoch), 'manifold')
     # plt.savefig(path)
     #plt.close()
@@ -332,10 +314,10 @@ def visualize_reconstruction(model, x_sample, epoch=100):
         plt.title("Reconstruction")
         plt.colorbar()
     plt.tight_layout()
-    #mpld3.show()
+    plt.show()
     path = os.path.join(os.path.curdir, str(epoch), 'reconstruction')
     # plt.savefig(path)
-    plt.close()
+
 
 if __name__ == '__main__':
     network_architecture = \
@@ -347,7 +329,12 @@ if __name__ == '__main__':
              latent_z=2)  # dimensionality of latent space
 
     vae = VariationalAutoencoder(network_architecture)
-    train(vae, training_epochs=100)
-    x_sample, _ = mnist.test.next_batch(100)
-    list_z =[]
-    visualize_latent(vae, x_sample, _, list_z)
+    #ani
+    #train(vae, training_epochs=10)
+    costlist = []
+    fig = plt.plot(costlist)
+    plt.ylabel('cost')
+    plt.xlabel('epoch')
+    plt.title('cost per epoch')
+    ani = animation.FuncAnimation(fig, train(vae,training_epochs=3 ))
+    plt.show()

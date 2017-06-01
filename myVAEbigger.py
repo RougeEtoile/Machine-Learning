@@ -10,8 +10,8 @@ n_samples = mnist.train.num_examples
 np.random.seed(0)
 tf.set_random_seed(0)
 
-os.mkdir(r"plots\9")
-os.chdir(r"plots\9")
+#os.mkdir(r"plots\9")
+#os.chdir(r"plots\9")
 
 
 class VariationalAutoencoder(object):
@@ -235,15 +235,15 @@ def train(network_architecture, learning_rate=0.001,
             costlist.append(avg_cost)
 
     #plot cost
-    thefile = open('final_cost.txt', 'w')
-    thefile.write("%s\n" % costlist[-1])
+   # thefile = open('final_cost.txt', 'w')
+    #thefile.write("%s\n" % costlist[-1])
     plt.plot(costlist)
     plt.ylabel('cost')
     plt.xlabel('epoch')
     plt.title('cost per epoch')
-    plt.savefig('cost_per_epoch')
+    #plt.savefig('cost_per_epoch')
     plt.show()
-    plt.close()
+   #plt.close()
     return vae
 
 
@@ -257,7 +257,7 @@ def visualize_latent(vae, x_sample):  # latent must be size 2
     ax.set_xlim([-10., 10.])
     ax.set_ylim([-10., 10.])
     f.colorbar(im, ax=ax, label='Digit class')
-    plt.savefig('latent_visualization')
+    #plt.savefig('latent_visualization')
     plt.tight_layout()
 
 
@@ -291,7 +291,7 @@ network_architecture = \
          n_input=784,  # MNIST data input (img shape: 28*28)
          latent_z=2)  # dimensionality of latent space
 
-vae = train(network_architecture, training_epochs=500)
+vae = train(network_architecture, training_epochs=1)
 
 x_sample, _ = mnist.test.next_batch(100)
 x_reconstruct = vae.reconstruct(x_sample)
