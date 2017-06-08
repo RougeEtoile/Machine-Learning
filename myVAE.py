@@ -4,6 +4,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
+import time
 import json
 
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
@@ -206,27 +207,14 @@ class VariationalAutoencoder(object):
 def train(model, learning_rate=0.001,
           batch_size=100, training_epochs=10, display_step=1):
     vae = model
-    #plt.ion()
+    plt.ion()
+    init_fig = True
     x_sample, _ = mnist.test.next_batch(100)
     saver = tf.train.Saver()
     costlist = []
-    plt.plot(costlist)
-    plt.ylabel('cost')
-    plt.xlabel('epoch')
-    plt.title('cost per epoch')
-
-    '''z = vae.transform(x_sample)
-    f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
-    im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10",
-                    alpha=0.7)
-    ax.set_xlabel('First dimension of sampled latent variable $z_1$')
-    ax.set_ylabel('Second dimension of sampled latent variable mean $z_2$')
-    ax.set_xlim([-4., 4.])
-    ax.set_ylim([-4., 4.])
-    f.colorbar(im, ax=ax, label='Digit class')'''
     # Training cycle
     for epoch in range(training_epochs):
-        avg_cost = 0.
+        avg_cost = 0
         total_batch = int(n_samples / batch_size)
         # Loop over all batches
         for i in range(total_batch):
@@ -241,10 +229,11 @@ def train(model, learning_rate=0.001,
             print("Epoch:", '%04d' % (epoch + 1),
                   "cost=", "{:.9f}".format(avg_cost))
             costlist.append(avg_cost)
-            plt.plot(costlist)
-            plt.draw()
-            plt.pause(0.00001)
-            #visualize_latent(vae,z, ax, x_sample,_)        	   
+            visualize_cost(costlist, init_fig)
+            visualize_latent(vae, x_sample, _, init_fig)
+            visualize_manifold(vae, x_sample, init_fig)
+            visualize_reconstruction(vae, x_sample, init_fig)
+            init_fig = False
 
         #Visualizations
         path = os.path.join(os.path.curdir, str(epoch))
@@ -275,56 +264,109 @@ def train(model, learning_rate=0.001,
     return vae
 
 
-def visualize_latent(vae, z, ax, x_sample,_):  # latent must be size 2
-    z = vae.transform(x_sample)
-    plt.cla()
-    im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10", alpha =0.7)	
-    #plt.savefig('latent_visualization')
+def visualize_cost(costlist, init_fig):
+
+    if init_fig:
+        # plt.figure(1)
+        plt.plot(costlist)
+        plt.ylabel('cost')
+        plt.xlabel('epoch')
+        plt.title('cost per epoch')
+    plt.figure(1)
+    plt.plot(costlist)
     plt.draw()
-    plt.pause(0.000001) 
-    # plt.tight_layout()
-    #plt.show()
+    plt.pause(0.000001)
 
 
-def visualize_manifold(model, x_sample, epoch=100):
-    nx = ny = 20
-    x_values = np.linspace(-3, 3, nx)
-    y_values = np.linspace(-3, 3, ny)
+def visualize_latent(model, x_sample, _, init_fig):  # latent must be size 2
 
-    canvas = np.empty((28 * ny, 28 * nx))
-    for i, yi in enumerate(x_values):
-        for j, xi in enumerate(y_values):
-            z_mu = np.array([[xi, yi]] * model.batch_size)
-            x_mean = model.generate(z_mu)
-            canvas[(nx - i - 1) * 28:(nx - i) * 28, j * 28:(j + 1) * 28] = x_mean[0].reshape(28, 28)
+    if init_fig:
+        z = model.transform(x_sample)
+        # plt.figure(2)
+        f, ax = plt.subplots(1, figsize=(6 * 1.1618, 6))
+        im = ax.scatter(z[:, 0], z[:, 1], c=np.argmax(_, 1), cmap="Vega10",
+                        alpha=0.7)
+        ax.set_xlabel('First dimension of sampled latent variable $z_1$')
+        ax.set_ylabel('Second dimension of sampled latent variable mean $z_2$')
+        ax.set_xlim([-4., 4.])
+        ax.set_ylim([-4., 4.])
+        f.colorbar(im, ax=ax, label='Digit class')
+    else:
+        plt.figure(2)
+        z = model.transform(x_sample)
+        ax = plt.gca()
+        for coll in plt.gca().collections:
+            coll.remove()
+        im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10", alpha =0.7)
+        #plt.savefig('latent_visualization')
+        plt.draw()
+        plt.pause(0.000001)
+        # plt.tight_layout()
+        #plt.show()
 
-    plt.figure(figsize=(8, 10))
-    Xi, Yi = np.meshgrid(x_values, y_values)
-    plt.imshow(canvas, origin="upper", cmap="Greys")
-    plt.tight_layout()
-    plt.show()
-    path = os.path.join(os.path.curdir, str(epoch), 'manifold')
-    # plt.savefig(path)
-    #plt.close()
+
+def visualize_manifold(model, x_sample, init_fig):
+    if init_fig:
+        nx = ny = 20
+        x_values = np.linspace(-3, 3, nx)
+        y_values = np.linspace(-3, 3, ny)
+
+        canvas = np.empty((28 * ny, 28 * nx))
+        for i, yi in enumerate(x_values):
+            for j, xi in enumerate(y_values):
+                z_mu = np.array([[xi, yi]] * model.batch_size)
+                x_mean = model.generate(z_mu)
+                canvas[(nx - i - 1) * 28:(nx - i) * 28, j * 28:(j + 1) * 28] = x_mean[0].reshape(28, 28)
+
+        plt.figure()
+        plt.imshow(canvas, origin="upper", cmap="Greys")
+    else:
+        nx = ny = 20
+        x_values = np.linspace(-3, 3, nx)
+        y_values = np.linspace(-3, 3, ny)
+        canvas = np.empty((28 * ny, 28 * nx))
+        for i, yi in enumerate(x_values):
+            for j, xi in enumerate(y_values):
+                z_mu = np.array([[xi, yi]] * model.batch_size)
+                x_mean = model.generate(z_mu)
+                canvas[(nx - i - 1) * 28:(nx - i) * 28, j * 28:(j + 1) * 28] = x_mean[0].reshape(28, 28)
+        plt.figure(3)
+        fig = plt.gcf()
+        fig.clear()
+        plt.imshow(canvas, origin="upper", cmap="Greys")
+        plt.draw()
+        plt.pause(0.000001)
+        #path = os.path.join(os.path.curdir, str(epoch), 'manifold')
+        # plt.savefig(path)
+        #plt.close()
 
 
-def visualize_reconstruction(model, x_sample, epoch=100):
+def visualize_reconstruction(model, x_sample, init_fig):
     x_reconstruct = model.reconstruct(x_sample)
-    plt.figure(figsize=(8, 12))
-
-    for i in range(5):
-        plt.subplot(5, 2, 2*i + 1)
-        plt.imshow(x_sample[i].reshape(28, 28), vmin=0, vmax=1)
-        plt.title("Test input")
-        plt.colorbar()
-        plt.subplot(5, 2, 2*i + 2)
-        plt.imshow(x_reconstruct[i].reshape(28, 28), vmin=0, vmax=1)
-        plt.title("Reconstruction")
-        plt.colorbar()
-    plt.tight_layout()
-    plt.show()
-    path = os.path.join(os.path.curdir, str(epoch), 'reconstruction')
-    # plt.savefig(path)
+    if init_fig:
+        plt.figure(figsize=(4, 6))
+        for i in range(5):
+            plt.subplot(5, 2, 2 * i + 1)
+            plt.imshow(x_sample[i].reshape(28, 28), vmin=0, vmax=1)
+            plt.title("Test input")
+            plt.colorbar()
+            plt.subplot(5, 2, 2 * i + 2)
+            plt.imshow(x_reconstruct[i].reshape(28, 28), vmin=0, vmax=1)
+            plt.title("Reconstruction")
+            plt.colorbar()
+    else:
+        plt.figure(4)
+        f = plt.gcf()
+        f.clear()
+        for i in range(5):
+            plt.subplot(5, 2, 2*i + 1)
+            plt.imshow(x_sample[i].reshape(28, 28), vmin=0, vmax=1)
+            plt.subplot(5, 2, 2*i + 2)
+            plt.imshow(x_reconstruct[i].reshape(28, 28), vmin=0, vmax=1)
+        plt.draw()
+        plt.pause(0.000001)
+        #path = os.path.join(os.path.curdir, str(epoch), 'reconstruction')
+        # plt.savefig(path)
 
 
 if __name__ == '__main__':
