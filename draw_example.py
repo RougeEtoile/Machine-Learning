@@ -4,6 +4,7 @@ from random import randint
 
 def rand_scatter(xval, yval, init_fig):
     if init_fig:
+        plt.ion()
         f, ax = plt.subplots(1, figsize=(6 , 6))
         im = ax.scatter(xval, yval)
         ax.set_xlabel('x')
@@ -19,6 +20,7 @@ def rand_scatter(xval, yval, init_fig):
 
         plt.draw()
         plt.pause(0.000001)
+
 if __name__ == "__main__":
     xval = []
     yval = []

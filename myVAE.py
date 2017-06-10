@@ -2,9 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 import os
-import time
 import json
 
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
@@ -12,10 +10,7 @@ n_samples = mnist.train.num_examples
 np.random.seed(0)
 tf.set_random_seed(0)
 
-
-folder = os.path.join(os.path.curdir, 'main')
-# os.mkdir(folder)
-os.chdir(folder)
+root_dir = os.getcwd()
 
 
 class VariationalAutoencoder(object):
@@ -26,8 +21,8 @@ class VariationalAutoencoder(object):
             print("Loading previously trained network")
             self.network_architecture = network_architecture
             self.sess = tf.Session()
-            new_saver = tf.train.import_meta_graph(os.path.join(os.path.curdir, 'model', 'model.ckpt.meta'))
-            new_saver.restore(self.sess, tf.train.latest_checkpoint(os.path.join(os.path.curdir, 'model', './')))
+            new_saver = tf.train.import_meta_graph(os.path.join(os.path.curdir, 'main', 'model', 'model.ckpt.meta'))
+            new_saver.restore(self.sess, tf.train.latest_checkpoint(os.path.join(os.path.curdir, 'main','model', './')))
             self.sess.run(tf.global_variables_initializer())
             self._create_loss_optimizer()
             # Launch the session
@@ -128,7 +123,7 @@ class VariationalAutoencoder(object):
         z_log_sigma_sq = \
             tf.add(tf.matmul(layer_2, weights['out_log_sigma']),
                    biases['out_log_sigma'])
-        return (z_mean, z_log_sigma_sq)
+        return z_mean, z_log_sigma_sq
 
     def _decoder_network(self, weights, biases):
         # Generate probabilistic decoder (decoder network), which
@@ -204,14 +199,14 @@ class VariationalAutoencoder(object):
                              feed_dict={self.x: X})
 
 
-def train(model, learning_rate=0.001,
-          batch_size=100, training_epochs=10, display_step=1):
+def train(model, learning_rate=0.001, batch_size=100, training_epochs=10, display_step=1):
     vae = model
     plt.ion()
     init_fig = True
     x_sample, _ = mnist.test.next_batch(100)
     saver = tf.train.Saver()
     costlist = []
+    save = True
     # Training cycle
     for epoch in range(training_epochs):
         avg_cost = 0
@@ -225,46 +220,28 @@ def train(model, learning_rate=0.001,
             avg_cost += cost / n_samples * batch_size
 
         # Display logs per epoch step
-        if epoch % display_step == 0:
-            print("Epoch:", '%04d' % (epoch + 1),
-                  "cost=", "{:.9f}".format(avg_cost))
-            costlist.append(avg_cost)
-            visualize_cost(costlist, init_fig)
-            visualize_latent(vae, x_sample, _, init_fig)
-            visualize_manifold(vae, x_sample, init_fig)
-            visualize_reconstruction(vae, x_sample, init_fig)
-            init_fig = False
+        print("Epoch:", '%04d' % (epoch + 1),
+              "cost=", "{:.9f}".format(avg_cost))
 
-        #Visualizations
-        path = os.path.join(os.path.curdir, str(epoch))
-        # os.mkdir(path)
-        x_sample, _ = mnist.test.next_batch(100)
-        #visualize_reconstruction(vae, x_sample, epoch)
-        list_z = []
-       # visualize_latent(vae, x_sample=x_sample, _=_)
-        #visualize_manifold(vae, x_sample, epoch)
-
+        costlist.append(avg_cost)
+        visualize_cost(costlist, init_fig, epoch, save)
+        visualize_latent(vae, x_sample, _, init_fig, epoch, save)
+        visualize_manifold(vae, x_sample, init_fig, epoch, save)
+        visualize_reconstruction(vae, x_sample, init_fig, epoch, save)
+        init_fig = False
     #with open('latent.json', 'a+') as outfile:
      #   json.dump(list_z, outfile)
     #plot cost
     '''thefile = open('final_cost.txt', 'w')
     thefile.write("{}\n{}".format(costlist[0], costlist[-1]))
-    plt.plot(costlist)
-    plt.ylabel('cost')
-    plt.xlabel('epoch')
-    plt.title('cost per epoch')
-    plt.savefig('cost_per_epoch')
-    plt.tight_layout()
-    plt.close()'''
-
     path = os.path.join(os.path.curdir, 'model')
-    #os.mkdir(path)
-    #os.chdir(path)
-    #saver.save(vae.sess, "model.ckpt")
+    os.mkdir(path)
+    os.chdir(path)
+    saver.save(vae.sess, "model.ckpt")'''
     return vae
 
 
-def visualize_cost(costlist, init_fig):
+def visualize_cost(costlist, init_fig, epoch, save):
 
     if init_fig:
         # plt.figure(1)
@@ -272,13 +249,20 @@ def visualize_cost(costlist, init_fig):
         plt.ylabel('cost')
         plt.xlabel('epoch')
         plt.title('cost per epoch')
-    plt.figure(1)
-    plt.plot(costlist)
+    else:
+        plt.figure(1)
+        plt.plot(costlist)
     plt.draw()
     plt.pause(0.000001)
+    if save:
+        path = os.path.join(os.path.curdir, 'movie', 'cost')
+        os.chdir(path)
+        plt.savefig(str(epoch))
+        os.chdir(root_dir)
 
 
-def visualize_latent(model, x_sample, _, init_fig):  # latent must be size 2
+def visualize_latent(model, x_sample, _, init_fig, epoch, save):
+    """Latent must be size 2"""
 
     if init_fig:
         z = model.transform(x_sample)
@@ -291,6 +275,7 @@ def visualize_latent(model, x_sample, _, init_fig):  # latent must be size 2
         ax.set_xlim([-4., 4.])
         ax.set_ylim([-4., 4.])
         f.colorbar(im, ax=ax, label='Digit class')
+
     else:
         plt.figure(2)
         z = model.transform(x_sample)
@@ -298,14 +283,18 @@ def visualize_latent(model, x_sample, _, init_fig):  # latent must be size 2
         for coll in plt.gca().collections:
             coll.remove()
         im = ax.scatter(z[:,0], z[:,1], c=np.argmax(_, 1), cmap="Vega10", alpha =0.7)
-        #plt.savefig('latent_visualization')
-        plt.draw()
-        plt.pause(0.000001)
-        # plt.tight_layout()
-        #plt.show()
+
+    plt.draw()
+    plt.pause(0.000001)
+    if save:
+        path = os.path.join(os.path.curdir, 'movie', 'latent')
+        os.chdir(path)
+        plt.savefig(str(epoch))
+        os.chdir(root_dir)
 
 
-def visualize_manifold(model, x_sample, init_fig):
+def visualize_manifold(model, x_sample, init_fig, epoch, save):
+
     if init_fig:
         nx = ny = 20
         x_values = np.linspace(-3, 3, nx)
@@ -317,7 +306,6 @@ def visualize_manifold(model, x_sample, init_fig):
                 z_mu = np.array([[xi, yi]] * model.batch_size)
                 x_mean = model.generate(z_mu)
                 canvas[(nx - i - 1) * 28:(nx - i) * 28, j * 28:(j + 1) * 28] = x_mean[0].reshape(28, 28)
-
         plt.figure()
         plt.imshow(canvas, origin="upper", cmap="Greys")
     else:
@@ -334,14 +322,16 @@ def visualize_manifold(model, x_sample, init_fig):
         fig = plt.gcf()
         fig.clear()
         plt.imshow(canvas, origin="upper", cmap="Greys")
-        plt.draw()
-        plt.pause(0.000001)
-        #path = os.path.join(os.path.curdir, str(epoch), 'manifold')
-        # plt.savefig(path)
-        #plt.close()
+    plt.draw()
+    plt.pause(0.000001)
+    if save:
+        path = os.path.join(os.path.curdir, 'movie', 'manifold')
+        os.chdir(path)
+        plt.savefig(str(epoch))
+        os.chdir(root_dir)
 
 
-def visualize_reconstruction(model, x_sample, init_fig):
+def visualize_reconstruction(model, x_sample, init_fig, epoch, save):
     x_reconstruct = model.reconstruct(x_sample)
     if init_fig:
         plt.figure(figsize=(4, 6))
@@ -363,10 +353,14 @@ def visualize_reconstruction(model, x_sample, init_fig):
             plt.imshow(x_sample[i].reshape(28, 28), vmin=0, vmax=1)
             plt.subplot(5, 2, 2*i + 2)
             plt.imshow(x_reconstruct[i].reshape(28, 28), vmin=0, vmax=1)
-        plt.draw()
-        plt.pause(0.000001)
-        #path = os.path.join(os.path.curdir, str(epoch), 'reconstruction')
-        # plt.savefig(path)
+    plt.draw()
+    plt.pause(0.000001)
+
+    if save:
+        path = os.path.join(os.path.curdir, 'movie', 'reconstruction')
+        os.chdir(path)
+        plt.savefig(str(epoch))
+        os.chdir(root_dir)
 
 
 if __name__ == '__main__':
