@@ -1,0 +1,1 @@
+This is a collection of some of the work I did while working as a research assistant to the department of Scientific Computing at FSU. During that time I studied machine learning techniques primarily presented from the "Deep Learning" by Ian Goodfellow and Yoshua Benigo. I also assisted on making data visualizations and writing automation scripts.
